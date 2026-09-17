@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Telegram Mini App</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <main>
+      <section id="loadingScreen" class="screen screen-visible">
+        <div class="loading-card">
+          <div class="spinner"></div>
+          <h1>Welcome to Bingo Mini App</h1>
+          <p>Loading your dashboard…</p>
+          <div class="loading-status">Preparing your space</div>
+        </div>
+      </section>
+
+      <section id="dashboardScreen" class="screen">
+
+        <div class="dashboard-header">
+          <div class="dashboard-user">
+            <div id="avatarInitial" class="avatar">B</div>
+            <div>
+              <div id="dashboardUsername" class="username">BingoBot</div>
+              <div class="balance">Balance: <strong id="dashboardBalance">$312</strong></div>
+            </div>
+          </div>
+
+          <div class="dashboard-center">
+            <div class="countdown-label">Time remaining</div>
+            <div id="countdownTimer" class="countdown-timer">01:00</div>
+          </div>
+
+          <div class="dashboard-right">
+            <div class="dashboard-actions">
+              <button type="button" id="historyBtn" class="icon-button" aria-label="History">
+                <span class="icon">⏱</span>
+                <span>History</span>
+              </button>
+              <button type="button" id="helpBtn" class="icon-button" aria-label="Help">
+                <span class="icon">❓</span>
+                <span>Help</span>
+              </button>
+            </div>
+            <button id="menuToggle" class="menu-button" aria-label="Open menu">☰</button>
+          </div>
+        </div>
+
+        <div id="selectionPopup" class="selection-popup">
+          <div class="selection-popup-content">
+            <div class="selection-header">
+              <div class="selection-text">Selected board number: <span id="selectedNumberText">--</span></div>
+              <button id="popupClose" type="button" class="popup-close" aria-label="Close">✕</button>
+            </div>
+
+            <div class="board-headers">
+              <div class="board-header-cell">B</div>
+              <div class="board-header-cell">I</div>
+              <div class="board-header-cell">N</div>
+              <div class="board-header-cell">G</div>
+              <div class="board-header-cell">O</div>
+            </div>
+
+            <div class="selection-board">
+              <div class="board-cell">1</div>
+              <div class="board-cell">2</div>
+              <div class="board-cell">3</div>
+              <div class="board-cell">4</div>
+              <div class="board-cell">5</div>
+              <div class="board-cell">6</div>
+              <div class="board-cell">7</div>
+              <div class="board-cell">8</div>
+              <div class="board-cell">9</div>
+              <div class="board-cell">10</div>
+              <div class="board-cell">11</div>
+              <div class="board-cell">12</div>
+              <div class="board-cell board-cell-free">X</div>
+              <div class="board-cell">14</div>
+              <div class="board-cell">15</div>
+              <div class="board-cell">16</div>
+              <div class="board-cell">17</div>
+              <div class="board-cell">18</div>
+              <div class="board-cell">19</div>
+              <div class="board-cell">20</div>
+              <div class="board-cell">21</div>
+              <div class="board-cell">22</div>
+              <div class="board-cell">23</div>
+              <div class="board-cell">24</div>
+              <div class="board-cell">25</div>
+            </div>
+
+            <div class="selection-actions selection-actions-bottom">
+              <button id="betButton" type="button" class="bet-button">Bet</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mini-header-card">
+          <div class="mini-header-item mini-header-inline">
+            <div class="mini-header-pair">
+              <span class="mini-header-name">G-id</span>
+              <span class="mini-header-eq">=</span>
+              <span id="gameIdValue" class="mini-header-value">#BNG-4172</span>
+            </div>
+          </div>
+          <div class="mini-header-item mini-header-inline">
+            <div class="mini-header-pair">
+              <span class="mini-header-name">Players</span>
+              <span class="mini-header-eq">=</span>
+              <span id="playersValue" class="mini-header-value">18 joined</span>
+            </div>
+          </div>
+          <div class="mini-header-item mini-header-select" data-select="stage">
+            <div class="mini-header-row">
+              <span class="mini-header-label">Stage</span>
+              <button type="button" class="select-trigger" aria-expanded="false">
+                <span class="select-value">Stage 3</span>
+                <span class="select-arrow">▾</span>
+              </button>
+            </div>
+            <div class="select-list" role="menu">
+              <button type="button" data-value="Stage 1" class="select-item">Stage 1</button>
+              <button type="button" data-value="Stage 2" class="select-item">Stage 2</button>
+              <button type="button" data-value="Stage 3" class="select-item active">Stage 3</button>
+            </div>
+          </div>
+          <div class="mini-header-item mini-header-select" data-select="amount">
+            <div class="mini-header-row">
+              <span class="mini-header-label">Amount</span>
+              <button type="button" class="select-trigger" aria-expanded="false">
+                <span class="select-value">$10</span>
+                <span class="select-arrow">▾</span>
+              </button>
+            </div>
+            <div class="select-list" role="menu">
+              <button type="button" data-value="$10" class="select-item">10</button>
+              <button type="button" data-value="$20" class="select-item">20</button>
+              <button type="button" data-value="$30" class="select-item">30</button>
+              <button type="button" data-value="$50" class="select-item">50</button>
+              <button type="button" data-value="$100" class="select-item">100</button>
+              <button type="button" data-value="$200" class="select-item">200</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-banner" id="statusBanner" style="display:none;">
+          <span id="statusMessage">Ready to place your bet</span>
+        </div>
+        <div class="bet-summary" id="betSummaryText">Bet details will appear here.</div>
+        <div class="selected-numbers" id="selectedNumbersValue">Selected numbers: none</div>
+        <div class="mark-summary" id="markText">Mark table data will appear here.</div>
+
+        <div class="number-grid-section">
+          <div id="numberGrid" class="number-grid"></div>
+        </div>
+
+        <div class="number-grid-controls">
+          <button id="prevPage" type="button" class="control-button" aria-label="Previous page">‹</button>
+          <div id="rangeLabel" class="control-label">1 - 100</div>
+          <button id="nextPage" type="button" class="control-button" aria-label="Next page">›</button>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-icon">⏱</span>
+            <h3 id="historyModalTitle" class="modal-title">Bet History</h3>
+          </div>
+          <button type="button" id="historyModalClose" class="modal-close" aria-label="Close history">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="historyContent" class="history-list">
+            <div class="history-empty">
+              <span class="history-empty-icon">📋</span>
+              <p>No bet history yet.</p>
+              <p class="history-empty-sub">Your placed bets will appear here.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-icon">❓</span>
+            <h3 id="helpModalTitle" class="modal-title">How to Play</h3>
+          </div>
+          <button type="button" id="helpModalClose" class="modal-close" aria-label="Close help">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="help-section">
+            <h4 class="help-section-title">🎯 Getting Started</h4>
+            <ul class="help-list">
+              <li>Choose a <strong>Stage</strong> (1, 2 or 3) and a bet <strong>Amount</strong> from the top bar.</li>
+              <li>Pick a number from the grid below — your selection is highlighted in blue.</li>
+              <li>Tap <strong>Bet</strong> in the popup to confirm and place your bet.</li>
+            </ul>
+          </div>
+          <div class="help-section">
+            <h4 class="help-section-title">📋 Bet Rules</h4>
+            <ul class="help-list">
+              <li>You can only have <strong>one active bet</strong> at a time across all stages.</li>
+              <li>To change your number or stage, first <strong>Cancel Bet</strong> using the button in the popup.</li>
+              <li>Numbers are split across 3 pages: <strong>1–100</strong>, <strong>101–200</strong>, <strong>201–300</strong>.</li>
+            </ul>
+          </div>
+          <div class="help-section">
+            <h4 class="help-section-title">⏱ Countdown Timer</h4>
+            <ul class="help-list">
+              <li>The timer at the top counts down the remaining time for the current round.</li>
+              <li>Place your bet before the timer reaches <strong>00:00</strong>.</li>
+            </ul>
+          </div>
+          <div class="help-section">
+            <h4 class="help-section-title">💰 Balance & Payouts</h4>
+            <ul class="help-list">
+              <li>Your current balance is shown in the top-left corner.</li>
+              <li>Winnings are calculated based on the stage amount you selected.</li>
+            </ul>
+          </div>
+          <div class="help-section">
+            <h4 class="help-section-title">🆔 Account</h4>
+            <ul class="help-list">
+              <li>Your account is identified by your <strong>phone number</strong>.</li>
+              <li>Open the app with the URL containing <code>token</code>, <code>phone</code>, <code>username</code>, and <code>balance</code> params.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    <aside id="sidebarPanel" class="sidebar-panel" aria-hidden="true">
+      <!-- Sidebar profile card -->
+      <div class="sidebar-profile">
+        <div id="sidebarAvatar" class="sidebar-avatar">B</div>
+        <div class="sidebar-profile-info">
+          <div id="sidebarUsername" class="sidebar-profile-name">BingoBot</div>
+          <div id="sidebarPhone" class="sidebar-profile-phone">+1234567890</div>
+          <div id="sidebarBalance" class="sidebar-profile-balance">$312</div>
+        </div>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <!-- Menu items -->
+      <nav class="sidebar-nav">
+        <button type="button" id="menuProfileBtn" class="sidebar-item">
+          <span class="sidebar-item-icon">👤</span>
+          <span class="sidebar-item-label">Profile</span>
+          <span class="sidebar-item-arrow">›</span>
+        </button>
+        <button type="button" id="menuSoundBtn" class="sidebar-item sidebar-item-toggle">
+          <span class="sidebar-item-icon">🔊</span>
+          <span class="sidebar-item-label">Sound</span>
+          <span id="soundToggle" class="toggle-switch toggle-on" role="switch" aria-checked="true"></span>
+        </button>
+        <button type="button" id="menuNotifBtn" class="sidebar-item sidebar-item-toggle">
+          <span class="sidebar-item-icon">🔔</span>
+          <span class="sidebar-item-label">Notifications</span>
+          <span id="notifToggle" class="toggle-switch toggle-on" role="switch" aria-checked="true"></span>
+        </button>
+        <button type="button" id="menuSettingsBtn" class="sidebar-item">
+          <span class="sidebar-item-icon">⚙️</span>
+          <span class="sidebar-item-label">Settings</span>
+          <span class="sidebar-item-arrow">›</span>
+        </button>
+
+        <div class="sidebar-divider"></div>
+
+        <button type="button" id="menuLogoutBtn" class="sidebar-item sidebar-item-danger">
+          <span class="sidebar-item-icon">🚪</span>
+          <span class="sidebar-item-label">Logout</span>
+        </button>
+      </nav>
+
+      <button id="sidebarClose" class="sidebar-close" aria-label="Close menu">✕</button>
+    </aside>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-icon">👤</span>
+            <h3 id="profileModalTitle" class="modal-title">Profile</h3>
+          </div>
+          <button type="button" id="profileModalClose" class="modal-close" aria-label="Close profile">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="profile-card">
+            <div id="profileAvatarLarge" class="profile-avatar-large">B</div>
+            <div id="profileNameLarge" class="profile-name-large">BingoBot</div>
+            <div id="profilePhoneLarge" class="profile-phone-large">+1234567890</div>
+          </div>
+          <div class="profile-stats">
+            <div class="profile-stat-item">
+              <span class="profile-stat-label">Balance</span>
+              <span id="profileBalance" class="profile-stat-value">$312</span>
+            </div>
+            <div class="profile-stat-item">
+              <span class="profile-stat-label">Token</span>
+              <span id="profileToken" class="profile-stat-value profile-token-value">abc123</span>
+            </div>
+            <div class="profile-stat-item">
+              <span class="profile-stat-label">Bets placed</span>
+              <span id="profileBetsPlaced" class="profile-stat-value">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-icon">⚙️</span>
+            <h3 id="settingsModalTitle" class="modal-title">Settings</h3>
+          </div>
+          <button type="button" id="settingsModalClose" class="modal-close" aria-label="Close settings">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="settings-group">
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <span class="settings-row-label">🔊 Sound Effects</span>
+                <span class="settings-row-desc">Play sounds when placing bets</span>
+              </div>
+              <span id="settingsSoundToggle" class="toggle-switch toggle-on" role="switch" aria-checked="true"></span>
+            </div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <span class="settings-row-label">🔔 Notifications</span>
+                <span class="settings-row-desc">Receive game result alerts</span>
+              </div>
+              <span id="settingsNotifToggle" class="toggle-switch toggle-on" role="switch" aria-checked="true"></span>
+            </div>
+          </div>
+          <div class="settings-group">
+            <div class="settings-group-title">About</div>
+            <div class="settings-info-row">
+              <span class="settings-info-label">App version</span>
+              <span class="settings-info-value">1.0.0</span>
+            </div>
+            <div class="settings-info-row">
+              <span class="settings-info-label">Backend</span>
+              <span class="settings-info-value">localhost:5000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout Confirm Modal -->
+    <div id="logoutModal" class="modal-overlay" aria-hidden="true">
+      <div class="modal-container modal-container-sm" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-icon">🚪</span>
+            <h3 id="logoutModalTitle" class="modal-title">Logout</h3>
+          </div>
+          <button type="button" id="logoutModalClose" class="modal-close" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="logout-message">Are you sure you want to log out? Your session will be cleared.</p>
+          <div class="logout-actions">
+            <button type="button" id="logoutCancelBtn" class="btn-secondary">Cancel</button>
+            <button type="button" id="logoutConfirmBtn" class="btn-danger">Yes, Logout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  <div id="authModal" class="auth-modal" style="display:none;">
+    <div class="auth-modal-content">
+      <h3>Sign in to continue</h3>
+      <p>Open the app using a URL with query parameters in this order: <strong>token</strong>, <strong>phonenumber</strong>, <strong>username</strong>, <strong>balance</strong>.</p>
+      <p>Example quick links:</p>
+      <ul id="authSampleList" class="auth-sample-list"></ul>
+      <p>Or append parameters to the URL and reload the page.</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "bingo-telegram-mini-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telegram-style mini frontend app for Bingo.",
+  "scripts": {
+    "dev": "lite-server --port 3000 --host 0.0.0.0 --baseDir ."
+  },
+  "devDependencies": {
+    "lite-server": "^2.6.1"
+  }
+}

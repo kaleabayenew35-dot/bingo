@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo — Display</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="display.css" />
+</head>
+<body class="display-body">
+
+  <!-- 3-second entry countdown overlay -->
+  <div id="entryOverlay" class="entry-overlay">
+    <div class="entry-count" id="entryCount">3</div>
+    <div class="entry-label">Round starting…</div>
+  </div>
+
+  <!-- Main display page (hidden until entry countdown finishes) -->
+  <div id="displayPage" class="display-page" style="display:none;">
+
+    <!-- ── Header ── -->
+    <header class="display-header">
+      <div class="display-header-left">
+        <div class="display-logo">🎱</div>
+        <div class="display-title">Bingo Live</div>
+      </div>
+      <div class="display-header-center">
+        <div class="display-time-label">Time Remaining</div>
+        <div id="displayTimer" class="display-timer">01:00</div>
+      </div>
+      <div class="display-header-right">
+        <!-- Player info from index.html -->
+        <div class="display-player-info">
+          <div id="dspPlayerAvatar" class="display-player-avatar">B</div>
+          <div class="display-player-details">
+            <div id="dspPlayerName" class="display-player-name">—</div>
+            <div id="dspPlayerBalance" class="display-player-balance">$0</div>
+          </div>
+        </div>
+        <div class="display-round-badge" id="displayRoundBadge">Round Live</div>
+      </div>
+    </header>
+
+    <!-- ── Mini header info bar ── -->
+    <div class="display-mini-header">
+      <div class="display-mini-item">
+        <span class="display-mini-label">Game ID</span>
+        <span id="dspGameId" class="display-mini-value">—</span>
+      </div>
+      <div class="display-mini-item">
+        <span class="display-mini-label">Stage</span>
+        <span id="dspStage" class="display-mini-value">—</span>
+      </div>
+      <div class="display-mini-item">
+        <span class="display-mini-label">Amount</span>
+        <span id="dspAmount" class="display-mini-value">—</span>
+      </div>
+      <div class="display-mini-item">
+        <span class="display-mini-label">Players</span>
+        <span id="dspPlayers" class="display-mini-value">—</span>
+      </div>
+      <div class="display-mini-item display-mini-payout">
+        <span class="display-mini-label">Payout</span>
+        <span id="dspPayout" class="display-mini-value">—</span>
+      </div>
+      <div class="display-mini-item display-mini-call">
+        <span class="display-mini-label">Call</span>
+        <span id="dspCall" class="display-mini-value display-mini-call-value">—</span>
+      </div>
+    </div>
+
+    <!-- ── Two-column content area ── -->
+    <div class="display-content" id="displayContent">
+
+      <!-- 15% — BINGO column labels + all numbers listed vertically -->
+      <aside class="bingo-sidebar">
+        <div class="bingo-col-item bingo-col-b">
+          <div class="bingo-col-letter">B</div>
+          <div class="bingo-col-nums-list" id="colB">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+            <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span>
+            <span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+          </div>
+        </div>
+        <div class="bingo-col-item bingo-col-i">
+          <div class="bingo-col-letter">I</div>
+          <div class="bingo-col-nums-list" id="colI">
+            <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+            <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span>
+            <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span>
+          </div>
+        </div>
+        <div class="bingo-col-item bingo-col-n">
+          <div class="bingo-col-letter">N</div>
+          <div class="bingo-col-nums-list" id="colN">
+            <span>31</span><span>32</span><span>33</span><span>34</span><span>35</span>
+            <span>36</span><span>37</span><span>38</span><span>39</span><span>40</span>
+            <span>41</span><span>42</span><span>43</span><span>44</span><span>45</span>
+          </div>
+        </div>
+        <div class="bingo-col-item bingo-col-g">
+          <div class="bingo-col-letter">G</div>
+          <div class="bingo-col-nums-list" id="colG">
+            <span>46</span><span>47</span><span>48</span><span>49</span><span>50</span>
+            <span>51</span><span>52</span><span>53</span><span>54</span><span>55</span>
+            <span>56</span><span>57</span><span>58</span><span>59</span><span>60</span>
+          </div>
+        </div>
+        <div class="bingo-col-item bingo-col-o">
+          <div class="bingo-col-letter">O</div>
+          <div class="bingo-col-nums-list" id="colO">
+            <span>61</span><span>62</span><span>63</span><span>64</span><span>65</span>
+            <span>66</span><span>67</span><span>68</span><span>69</span><span>70</span>
+            <span>71</span><span>72</span><span>73</span><span>74</span><span>75</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 85% — right side: current number + player boards -->
+      <section class="boards-area" id="boardsArea">
+
+        <!-- Current drawn number — big display -->
+        <div class="draw-current" id="drawCurrent" style="display:none;">
+          <div class="draw-current-letter" id="drawCurrentLetter">B</div>
+          <div class="draw-current-number" id="drawCurrentNumber">—</div>
+          <div class="draw-current-count" id="drawCurrentCount">0 / 75</div>
+        </div>
+
+        <!-- Player bet boards -->
+        <div class="boards-wrap" id="boardsWrap">
+          <div class="boards-empty" id="boardsEmpty">
+            <span class="boards-empty-icon">🎯</span>
+            <span>No bets placed this round</span>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </div>
+
+  <script src="auth.js"></script>
+  <script src="display.js"></script>
+</body>
+</html>
