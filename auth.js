@@ -39,12 +39,14 @@ function parseAuthStateFromUrl() {
   const username = normalizeAuthParam(params.username) || 'Guest';
   const phone = normalizeAuthParam(params.phone) || '-';
   const token = normalizeAuthParam(params.token) || 'none';
+  const launch = normalizeAuthParam(params.launch) || '';
   const balance = Number(params.balance) || 0;
 
   return {
     username,
     phone,
     token,
+    launch,
     balance,
   };
 }
@@ -65,7 +67,9 @@ function getAuthState() {
 }
 
 function isAuthenticated(state) {
-  return state && state.token && state.token !== 'none' && state.username && state.username !== 'Guest' && state.phone && state.phone !== '-';
+  const hasSecureParams = state && state.token && state.token !== 'none' && state.launch;
+  const hasLegacyParams = state && state.token && state.token !== 'none' && state.username && state.username !== 'Guest' && state.phone && state.phone !== '-';
+  return Boolean(hasSecureParams || hasLegacyParams);
 }
 
 function showAuthModal() {

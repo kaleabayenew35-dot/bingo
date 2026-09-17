@@ -130,6 +130,7 @@ function startRedirectCountdown(stage, amount) {
       const phone    = authState.phone    || '';
       const balance  = String(authState.balance || 0);
       const token    = authState.token    || '';
+      const launch   = authState.launch   || '';
 
       // payout is calculated by display.js from the backend (total_players × amount)
 
@@ -143,6 +144,7 @@ function startRedirectCountdown(stage, amount) {
         phone,
         balance,
         token,
+        launch,
       });
 
       // Generate the 75-number draw on the backend BEFORE navigating

@@ -18,6 +18,7 @@
   // Pass original URL params back to index.html on redirect
   const phone    = params.get('phone')    || '';
   const token    = params.get('token')    || '';
+  const launch   = params.get('launch')   || '';
 
   // ── DOM refs ──────────────────────────────────────────────
   const entryOverlay      = document.getElementById('entryOverlay');
@@ -152,7 +153,7 @@
           if (displayTimer) displayTimer.textContent = '00:00';
           // Wait 3 seconds then redirect to index.html with player auth params
           setTimeout(() => {
-            const backQuery = new URLSearchParams({ token, phone, username, balance });
+            const backQuery = new URLSearchParams({ token, launch, phone, username, balance });
             window.location.href = `index.html?${backQuery.toString()}`;
           }, 3000);
           return;
