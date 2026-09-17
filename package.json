@@ -4,7 +4,8 @@
   "private": true,
   "description": "Telegram-style mini frontend app for Bingo.",
   "scripts": {
-    "dev": "lite-server --port 3000 --host 0.0.0.0 --baseDir ."
+    "dev": "lite-server --config=bs-config.js",
+    "start": "lite-server --config=bs-config.js"
   },
   "devDependencies": {
     "lite-server": "^2.6.1"
