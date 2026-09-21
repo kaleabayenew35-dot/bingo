@@ -60,8 +60,46 @@ let betEntries = [];         // array of { numbers: [...] } — one per placed b
 let pendingCancelEntry = null; // { numbers: [...] } set when user taps a teal number
 let betPlaced = false;       // true when at least one bet is active
 
-// map: number → array of usernames who have betted it (from other players)
-let otherPlayersBets = {};   // e.g. { 1: ['BingoBot'], 5: ['LuckyLena', 'BingoBot'] }
+// map: number → array of masked phones who have betted it (from other players)
+let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '2511****23'] }
+
+// ── Phone masking — 2519876543210 → 2519****10 ─────────────────────────────
+function maskPhone(phone) {
+  const s = String(phone || '').replace(/\s/g, '');
+  if (s.length < 6) return s;
+  // keep first 4 chars and last 2 chars, mask the middle
+  const keep = 4;
+  const tail = 2;
+  const middle = s.length - keep - tail;
+  return s.slice(0, keep) + '*'.repeat(Math.max(middle, 2)) + s.slice(s.length - tail);
+}
+
+// ── Parse mark string into { number → [maskedPhone, ...] } ─────────────────
+// Mark format: "username|phone:num1|num2,username2|phone2:num3"
+function parseMarkToOtherBets(markStr, myPhone) {
+  const map = {};
+  if (!markStr) return map;
+  const myClean = String(myPhone || '').replace(/\D/g, '');
+  markStr.split(',').forEach((entry) => {
+    entry = entry.trim();
+    if (!entry) return;
+    const colonIdx = entry.indexOf(':');
+    if (colonIdx === -1) return;
+    const beforeColon = entry.slice(0, colonIdx);
+    const numStr = entry.slice(colonIdx + 1);
+    const pipeIdx = beforeColon.indexOf('|');
+    const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
+    const entryPhoneClean = String(entryPhone || '').replace(/\D/g, '');
+    // skip our own entries
+    if (myClean && entryPhoneClean && (entryPhoneClean === myClean || entryPhoneClean.endsWith(myClean.slice(-9)) || myClean.endsWith(entryPhoneClean.slice(-9)))) return;
+    const masked = maskPhone(entryPhoneClean || entryPhone);
+    numStr.split('|').map(Number).filter(Boolean).forEach((num) => {
+      if (!map[num]) map[num] = [];
+      if (!map[num].includes(masked)) map[num].push(masked);
+    });
+  });
+  return map;
+}
 
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
@@ -203,15 +241,13 @@ function showSelectionPopup(tappedNumber) {
   selectionPopup.classList.add('open');
 }
 
-// Renders the "Already betted by: X, Y" banner inside the popup
+// Renders the "Already bet by: 2519****80" banner inside the popup
 function updatePopupOtherBettors(number) {
-  // find or create the other-bettors banner inside the popup
   let banner = document.getElementById('otherBettorsBanner');
   if (!banner) {
     banner = document.createElement('div');
     banner.id = 'otherBettorsBanner';
     banner.className = 'other-bettors-banner';
-    // insert right after the selection-header
     const header = selectionPopup.querySelector('.selection-header');
     if (header && header.parentNode) {
       header.parentNode.insertBefore(banner, header.nextSibling);
@@ -220,9 +256,9 @@ function updatePopupOtherBettors(number) {
 
   const others = (number !== undefined && otherPlayersBets[number]) ? otherPlayersBets[number] : [];
   if (others.length > 0) {
-    banner.innerHTML = `<span class="other-bettors-icon">⚠️</span> Already betted by: <strong>${others.join(', ')}</strong>`;
+    const phones = others.map(p => `<code>${p}</code>`).join(', ');
+    banner.innerHTML = `<span class="other-bettors-icon">⚠️</span> Already bet by: ${phones}`;
     banner.style.display = 'flex';
-    // mark the bet button to reflect this
     if (betButton && !bettedNumbers.includes(number)) {
       betButton.textContent = betPlaced ? 'Bet More Anyway' : 'Bet Anyway';
     }
@@ -719,6 +755,9 @@ function loadAmountData(amount) {
         gidEl.textContent = latest.game_id || '—';
       }
       if (markText) markText.textContent = latest.mark ? `Mark table: ${latest.mark}` : 'No current mark data';
+      // ── Sync other players' bets from mark ─────────────────────────────
+      otherPlayersBets = parseMarkToOtherBets(latest.mark || '', authState.phone);
+      renderNumberGrid(currentPageIndex);
     })
     .catch(() => {
       if (requestId !== amountLoadRequest) return;
@@ -727,7 +766,7 @@ function loadAmountData(amount) {
     });
 }
 
-// ── Live poll: update players count + game ID every 5 seconds ─────────────
+// ── Live poll: update players count + game ID + mark every 5 seconds ──────
 function startPlayersPoll(amount) {
   // stop any existing poll first
   if (playersPollInterval) { clearInterval(playersPollInterval); playersPollInterval = null; }
@@ -743,17 +782,32 @@ function startPlayersPoll(amount) {
       .then((data) => {
         if (!data?.rows?.length) return;
         const latest = data.rows[0];
+
+        // ── Update players count ────────────────────────────────────────
         const playersEl = document.getElementById('playersValue');
-        const gidEl = document.getElementById('gameIdValue');
-        // Only update if value actually changed — avoids unnecessary flicker
         if (playersEl && playersEl.textContent !== String(latest.total_players || 0)) {
           playersEl.textContent = String(latest.total_players || 0);
         }
+
+        // ── Update game ID ──────────────────────────────────────────────
+        const gidEl = document.getElementById('gameIdValue');
         if (gidEl && gidEl.textContent !== (latest.game_id || '—')) {
           gidEl.classList.remove('updating');
           void gidEl.offsetWidth;
           gidEl.classList.add('updating');
           gidEl.textContent = latest.game_id || '—';
+        }
+
+        // ── Update other players' bets from mark string ─────────────────
+        const newOtherBets = parseMarkToOtherBets(latest.mark || '', authState.phone);
+        // Only re-render grid if other bets changed
+        const oldKeys = Object.keys(otherPlayersBets).sort().join(',');
+        const newKeys = Object.keys(newOtherBets).sort().join(',');
+        if (oldKeys !== newKeys) {
+          otherPlayersBets = newOtherBets;
+          renderNumberGrid(currentPageIndex);
+        } else {
+          otherPlayersBets = newOtherBets;
         }
       })
       .catch(() => {}); // silent — poll will retry next tick
