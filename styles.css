@@ -903,12 +903,7 @@ main {
   gap: 6px;
   min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.amount-options::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .mini-header-label {
@@ -985,9 +980,9 @@ main {
 
 .amount-option {
   width: auto;
-  flex: 0 0 auto;
-  min-width: 52px;
-  padding: 7px 11px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 7px 6px;
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   text-align: center;
@@ -1164,6 +1159,13 @@ button {
 
   .amount-options {
     flex: 1 1 auto;
+    gap: 3px;
+  }
+
+  .amount-option {
+    min-width: 0;
+    padding: 6px 3px;
+    font-size: 0.72rem;
   }
 
   .select-trigger {
@@ -1984,6 +1986,16 @@ button {
 
   .players-icon {
     font-size: 0.82rem;
+  }
+
+  .amount-options {
+    gap: 2px;
+  }
+
+  .amount-option {
+    min-width: 0;
+    padding: 5px 1px;
+    font-size: 0.64rem;
   }
 
 }
