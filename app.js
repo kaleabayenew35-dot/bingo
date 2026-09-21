@@ -281,6 +281,7 @@ function showSelectionPopup(tappedNumber, event) {
     if (betPlaced && pending.length > 0) betButton.textContent = 'Bet More';
     else betButton.textContent = 'Bet';
   }
+  updatePopupOtherBettors(tappedNumber);
   renderSelectedNumbers();
   selectionPopup.classList.add('open');
 }
@@ -506,7 +507,8 @@ function renderNumberGrid(pageIndex = 0) {
         return;
       }
       if (isOther) {
-        // taken by someone else — do nothing, no popup, no toast
+        // Show the local warning popup without changing this player's selection.
+        showSelectionPopup(value, event);
         return;
       }
       // free number — select and open popup
