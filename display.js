@@ -59,15 +59,6 @@
     return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
   }
 
-  function formatDisplayGameId(id, amountValue) {
-    const normalized = String(id || '').trim().toUpperCase();
-    if (/^[A-F]\d+$/.test(normalized)) return normalized;
-    const numericId = normalized.replace(/\D/g, '');
-    const prefixes = { 10: 'A', 20: 'B', 30: 'C', 50: 'D', 100: 'E', 200: 'F' };
-    const prefix = prefixes[Number(amountValue)] || 'A';
-    return numericId ? `${prefix}${numericId}` : '—';
-  }
-
   function bingoColumn(n) {
     if (n >= 1  && n <= 15) return 'B';
     if (n >= 16 && n <= 30) return 'I';
@@ -228,7 +219,7 @@
   }
 
   function populateMiniHeader(gid, pl, po) {
-    if (dspGameId)  dspGameId.textContent  = formatDisplayGameId(gid, amount);
+    if (dspGameId)  dspGameId.textContent  = gid || '—';
     if (dspAmount)  dspAmount.textContent  = `$${amount}`;
     if (dspPlayers) dspPlayers.textContent = String(pl || '0');
     if (dspPayout)  dspPayout.textContent  = parseInt(po, 10) > 0 ? `$${po}` : '—';

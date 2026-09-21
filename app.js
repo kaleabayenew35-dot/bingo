@@ -76,15 +76,6 @@ function formatTime(seconds) {
   return `${minutes}:${remainder}`;
 }
 
-function formatDisplayGameId(gameId, amount) {
-  const normalized = String(gameId || '').trim().toUpperCase();
-  if (/^[A-F]\d+$/.test(normalized)) return normalized;
-  const numericId = normalized.replace(/\D/g, '');
-  const prefixes = { 10: 'A', 20: 'B', 30: 'C', 50: 'D', 100: 'E', 200: 'F' };
-  const prefix = prefixes[Number(amount)] || 'A';
-  return numericId ? `${prefix}${numericId}` : '—';
-}
-
 // startCountdown is now a no-op — real timer comes from startTimerPoll
 function startCountdown() {}
 
@@ -709,9 +700,7 @@ function loadAmountData(amount) {
         const total = latest.total_players || data.rows.reduce((acc, r) => acc + (r.total_players || 0), 0);
         playersEl.textContent = String(total);
         const gidEl = document.getElementById('gameIdValue');
-        if (gidEl) gidEl.textContent = latest.game_id
-          ? formatDisplayGameId(latest.game_id, amount)
-          : gidEl.textContent;
+        if (gidEl) gidEl.textContent = latest.game_id || '—';
 
         const mark = latest.mark || '';
         if (markText) markText.textContent = mark ? `Mark table: ${mark}` : 'No current mark data';
