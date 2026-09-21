@@ -562,7 +562,7 @@ main {
 
 .mini-header-card {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
   gap: 5px;
   padding: 4px;
   margin-bottom: 12px;
@@ -586,6 +586,11 @@ main {
 
 .game-id-display {
   order: -2;
+  width: max-content;
+  min-width: 92px;
+  padding-left: 10px;
+  padding-right: 10px;
+  white-space: nowrap;
 }
 
 .players-counter {
@@ -1142,7 +1147,7 @@ button {
   }
 
   .mini-header-card {
-    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
     padding: 4px;
   }
 
