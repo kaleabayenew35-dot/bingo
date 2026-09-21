@@ -676,7 +676,7 @@ function loadAmountData(amount) {
       if (data.rows && data.rows.length) {
         const latest = data.rows[0];
         const total = latest.total_players || data.rows.reduce((acc, r) => acc + (r.total_players || 0), 0);
-        playersEl.textContent = `${total} joined`;
+        playersEl.textContent = String(total);
         const gidEl = document.getElementById('gameIdValue');
         if (gidEl) gidEl.textContent = latest.game_id ? `#${latest.game_id}` : gidEl.textContent;
 
@@ -744,7 +744,7 @@ function loadAmountData(amount) {
         }
         refreshBetButtonState();
       } else {
-        playersEl.textContent = '0 joined';
+        playersEl.textContent = '0';
         if (markText) markText.textContent = 'No current mark data';
         betPlaced = false;
         betEntries = [];

@@ -587,6 +587,22 @@ main {
   display: none;
 }
 
+.players-counter {
+  justify-content: center;
+  gap: 7px;
+  min-width: 58px;
+}
+
+.players-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.players-counter .mini-header-value {
+  color: var(--gold-light);
+  font-weight: 800;
+}
+
 .mini-header-item .mini-header-row,
 .mini-header-item .mini-header-pair {
   display: flex;
