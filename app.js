@@ -743,6 +743,42 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (menuSettingsBtn) menuSettingsBtn.addEventListener('click', openSettingsModal);
   if (menuLogoutBtn) menuLogoutBtn.addEventListener('click', openLogoutModal);
 
+  // ── Balance refresh button ─────────────────────────────────────────────
+  const balanceRefreshBtn = document.getElementById('balanceRefreshBtn');
+  if (balanceRefreshBtn) {
+    balanceRefreshBtn.addEventListener('click', async () => {
+      balanceRefreshBtn.classList.add('spinning');
+      try {
+        const systemApiUrl = (window.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api');
+
+        // If we have a launch token, use verify-launch-token to get the freshest balance
+        if (authState.launch) {
+          const res = await fetch(`${systemApiUrl}/verify-launch-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ launch: authState.launch }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.valid && data.user) {
+              authState = { ...authState, balance: Number(data.user.balance ?? authState.balance) };
+            }
+          }
+        } else {
+          // Re-sync via bingo backend player sync
+          await syncPlayerWithBingoBackend();
+        }
+        if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+        refreshBetButtonState();
+        showStatus('Balance updated', 'success', 2000);
+      } catch (err) {
+        showStatus('Could not refresh balance', 'error', 2500);
+      } finally {
+        balanceRefreshBtn.classList.remove('spinning');
+      }
+    });
+  }
+
   const profileModal = document.getElementById('profileModal');
   const profileModalClose = document.getElementById('profileModalClose');
   if (profileModalClose) profileModalClose.addEventListener('click', () => closeModal(profileModal));
@@ -789,10 +825,20 @@ window.addEventListener('DOMContentLoaded', async () => {
           const cancelRes = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: authState.phone, numbers: entryNums }),
+            body: JSON.stringify({
+              phone: authState.phone,
+              numbers: entryNums,
+              launch: authState.launch || undefined,
+            }),
           });
           const cancelData = await cancelRes.json();
           if (!cancelRes.ok) throw new Error(cancelData.error || 'Cancel failed');
+
+          // Update local balance from refund
+          if (cancelData.newBalance != null) {
+            authState = { ...authState, balance: cancelData.newBalance };
+            if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+          }
 
           betEntries = betEntries.filter((e) => e !== pendingCancelEntry);
           rebuildBettedNumbers();
@@ -805,7 +851,8 @@ window.addEventListener('DOMContentLoaded', async () => {
           updateBetSummary();
           refreshBetButtonState();
           loadAmountData(a);
-          showStatus('Bet canceled successfully', 'success');
+          const refundMsg = cancelData.refundAmount ? ` · $${cancelData.refundAmount} refunded` : '';
+          showStatus(`Bet canceled${refundMsg}`, 'success');
         } catch (err) {
           console.error('Cancel failed', err);
           showStatus(`Failed to cancel bet: ${err.message || err}`, 'error');
@@ -821,10 +868,19 @@ window.addEventListener('DOMContentLoaded', async () => {
           const cancelRes = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: authState.phone }),
+            body: JSON.stringify({
+              phone: authState.phone,
+              launch: authState.launch || undefined,
+            }),
           });
           const cancelData = await cancelRes.json();
           if (!cancelRes.ok) throw new Error(cancelData.error || 'Cancel failed');
+
+          // Update local balance from refund
+          if (cancelData.newBalance != null) {
+            authState = { ...authState, balance: cancelData.newBalance };
+            if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+          }
 
           betPlaced = false;
           betEntries = [];
@@ -839,7 +895,8 @@ window.addEventListener('DOMContentLoaded', async () => {
           refreshBetButtonState();
           renderNumberGrid(currentPageIndex);
           loadAmountData(a);
-          showStatus('All bets canceled successfully', 'success');
+          const refundMsg = cancelData.refundAmount ? ` · $${cancelData.refundAmount} refunded` : '';
+          showStatus(`All bets canceled${refundMsg}`, 'success');
         } catch (err) {
           console.error('Cancel all failed', err);
           showStatus(`Failed to cancel bets: ${err.message || err}`, 'error');
