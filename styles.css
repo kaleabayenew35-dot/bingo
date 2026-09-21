@@ -1458,6 +1458,21 @@ button {
   background: rgba(239, 68, 68, 0.04);
 }
 
+.history-item-win {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.history-item-lose {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.history-item-pending {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.05);
+}
+
 .history-item-left {
   display: flex;
   align-items: flex-start;
@@ -1499,6 +1514,21 @@ button {
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.history-status-win {
+  color: #10b981;
+  font-weight: 800;
+}
+
+.history-status-lose {
+  color: #ef4444;
+  font-weight: 800;
+}
+
+.history-status-pending {
+  color: #f59e0b;
+  font-weight: 800;
 }
 
 /* ── Help sections ── */

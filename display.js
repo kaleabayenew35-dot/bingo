@@ -6,6 +6,7 @@
 (function () {
   const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
   const API = window?.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://bingo-backend-m1yf.onrender.com/api');
+  const SYSTEM_API = window?.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api';
 
   // ── URL params ────────────────────────────────────────────
   const params   = new URLSearchParams(window.location.search);
@@ -228,6 +229,22 @@
     if (dspPlayerBalance) dspPlayerBalance.textContent = `$${balance}`;
   }
 
+  function refreshLiveBalance() {
+    if (!launch || !dspPlayerBalance) return;
+    fetch(`${SYSTEM_API}/verify-launch-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launch }),
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!data || !data.valid) return;
+        const liveBalance = data.balance ?? data.user?.balance;
+        if (liveBalance != null) dspPlayerBalance.textContent = `$${Number(liveBalance)}`;
+      })
+      .catch(() => {});
+  }
+
   function populateMiniHeader(gid, pl, po) {
     if (dspGameId)  dspGameId.textContent  = gid || '—';
     if (dspAmount)  dspAmount.textContent  = `$${amount}`;
@@ -271,6 +288,8 @@
   // ── Step 2: Show page, 3s pre-roll, then start polling ───
   function startDisplay() {
     populatePlayerHeader();
+    refreshLiveBalance();
+    setInterval(refreshLiveBalance, 5000);
     populateMiniHeader(gameId, players, parseInt(players, 10) * amount);
     renderBoards(markRaw);
     refreshFromBackend();

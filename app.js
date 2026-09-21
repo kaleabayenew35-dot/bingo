@@ -145,10 +145,12 @@ function restoreOwnBetsFromMark(markStr, myPhone) {
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
 let playersPollInterval = null;   // live poll for players count + game ID
+let balancePollInterval = null;
 let redirecting = false; // prevent double-redirect
 let timerEndpoint = null;
 let amountLoadRequest = 0;
 let backendErrorShown = false;
+let activeRoundId = null;
 
 function showBackendError() {
   if (backendErrorShown) return;
@@ -490,6 +492,7 @@ function refreshBetButtonState() {
 }
 
 function clearSelectedNumbers() {
+  if (selectionPopup && selectionPopup.classList.contains('open')) hideSelectionPopup();
   selectedNumbers = [];
   bettedNumbers = [];
   betEntries = [];
@@ -598,6 +601,34 @@ async function syncPlayerWithBingoBackend() {
   if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
 }
 
+function startLiveBalancePoll() {
+  if (balancePollInterval) clearInterval(balancePollInterval);
+  if (!authState.launch) return;
+
+  const poll = async () => {
+    try {
+      const response = await fetch(`${window.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api'}/verify-launch-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ launch: authState.launch }),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!data.valid) return;
+      const liveBalance = data.balance ?? data.user?.balance;
+      if (liveBalance == null) return;
+      authState = { ...authState, balance: Number(liveBalance) };
+      if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+      refreshBetButtonState();
+    } catch (_) {
+      // Keep the last known balance while the system backend is unavailable.
+    }
+  };
+
+  poll();
+  balancePollInterval = setInterval(poll, 5000);
+}
+
 function advanceLoading() {
   if (currentStep < statusSteps.length) {
     loadingStatus.textContent = statusSteps[currentStep];
@@ -674,19 +705,25 @@ function renderHistoryContent(dbHistory) {
     return;
   }
 
-  // render DB history rows
-  const dbRows = items.map((h) => `
-    <div class="history-item history-item-placed">
+  // render DB history rows with the current round outcome
+  const dbRows = items.map((h) => {
+    const status = h.status || 'pending';
+    const statusLabel = status === 'win' ? 'Win' : status === 'lose' ? 'Lose' : 'Pending';
+    const statusClass = status === 'win' ? 'history-status-win' : status === 'lose' ? 'history-status-lose' : 'history-status-pending';
+    const payoutText = status === 'win' && Number(h.payout) > 0 ? ` · Won $${h.payout}` : '';
+    return `
+    <div class="history-item history-item-${status}">
       <div class="history-item-left">
-        <span class="history-item-icon">🎯</span>
+        <span class="history-item-icon">${status === 'win' ? '🏆' : status === 'lose' ? '✕' : '⏳'}</span>
         <div class="history-item-info">
-          <div class="history-item-label">Bet Placed</div>
-          <div class="history-item-detail">Game #${h.gameId} · $${h.amount}</div>
+          <div class="history-item-label">${statusLabel}</div>
+          <div class="history-item-detail">Game #${h.gameId} · $${h.amount}${payoutText}</div>
           <div class="history-item-numbers">Numbers: ${h.numbers.join(', ')}</div>
         </div>
       </div>
-      <div class="history-item-time">${h.placedAt ? new Date(h.placedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
-    </div>`).join('');
+      <div class="history-item-time ${statusClass}">${statusLabel}<br>${h.placedAt ? new Date(h.placedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+    </div>`;
+  }).join('');
 
   // render in-session canceled entries (not in DB)
   const cancelRows = betHistory
@@ -822,6 +859,11 @@ function loadAmountData(amount) {
         return;
       }
       const latest = data.rows[0];
+      const latestRoundId = latest.game_id || null;
+      if (activeRoundId && latestRoundId && activeRoundId !== latestRoundId) {
+        clearSelectedNumbers();
+      }
+      activeRoundId = latestRoundId;
       if (playersEl) playersEl.textContent = String(latest.total_players || 0);
       if (gidEl) {
         gidEl.classList.remove('updating');
@@ -865,6 +907,11 @@ function startPlayersPoll(amount) {
       .then((data) => {
         if (!data?.rows?.length) return;
         const latest = data.rows[0];
+        const latestRoundId = latest.game_id || null;
+        if (activeRoundId && latestRoundId && activeRoundId !== latestRoundId) {
+          clearSelectedNumbers();
+        }
+        activeRoundId = latestRoundId;
 
         // ── Update players count ────────────────────────────────────────
         const playersEl = document.getElementById('playersValue');
@@ -932,6 +979,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const amEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
       const a2 = amEl ? (parseInt((amEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10) : 10;
       loadAmountData(a2);
+      startLiveBalancePoll();
       setTimeout(advanceLoading, 900);
       window.removeEventListener('auth:changed', onAuthChanged);
     };
@@ -940,6 +988,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   setTimeout(advanceLoading, 900);
+  startLiveBalancePoll();
 
   if (menuToggle) menuToggle.addEventListener('click', openSidebar);
   if (sidebarClose) sidebarClose.addEventListener('click', closeSidebar);
