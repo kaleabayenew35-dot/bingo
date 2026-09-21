@@ -595,6 +595,20 @@ main {
   white-space: nowrap;
 }
 
+#gameIdValue {
+  transition: color 0.15s ease;
+}
+
+@keyframes gidFlash {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.45; }
+  100% { opacity: 1; }
+}
+
+#gameIdValue.updating {
+  animation: gidFlash 0.35s ease;
+}
+
 .players-counter {
   display: inline-flex;
   align-items: center;

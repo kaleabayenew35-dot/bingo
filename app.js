@@ -355,11 +355,6 @@ function clearSelectedNumbers() {
   betPlaced = false;
   otherPlayersBets = {};
   renderNumberGrid(currentPageIndex);
-  const amountElInit = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-  if (amountElInit) {
-    const ai = parseInt((amountElInit.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
-    loadAmountData(ai);
-  }
   updateBetSummary();
 }
 
@@ -627,7 +622,6 @@ function setupSelectDropdowns() {
       if (trigger) trigger.setAttribute('aria-expanded', 'false');
       clearSelectedNumbers();
       const amount = parseInt((valueDisplay.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
-      startTimerPoll(amount);
       loadAmountData(amount);
     };
 
@@ -657,6 +651,8 @@ function setupSelectDropdowns() {
 function loadAmountData(amount) {
   const requestId = ++amountLoadRequest;
   const apiUrl = `${getEnvApiUrl()}/amount/${amount}`;
+  // Do NOT blank out game-id/players while loading — keep current values visible until fresh data arrives
+  if (markText) markText.textContent = 'Loading round data...';
 
   fetch(apiUrl)
     .then(async (response) => {
@@ -666,20 +662,27 @@ function loadAmountData(amount) {
       return data;
     })
     .then((data) => {
-      if (requestId !== amountLoadRequest || !data?.rows?.length) return;
-      const latest = data.rows[0];
-      const playersEl = document.getElementById('playersValue');
-      const gidEl = document.getElementById('gameIdValue');
-      if (playersEl) playersEl.textContent = String(latest.total_players || 0);
-      if (gidEl) gidEl.textContent = latest.game_id || '—';
-      if (markText) markText.textContent = latest.mark ? `Mark table: ${latest.mark}` : 'No current mark data';
-    })
-    .catch((error) => {
       if (requestId !== amountLoadRequest) return;
       const playersEl = document.getElementById('playersValue');
       const gidEl = document.getElementById('gameIdValue');
-      if (playersEl) playersEl.textContent = '0';
-      if (gidEl) gidEl.textContent = '—';
+      if (!data?.rows?.length) {
+        if (playersEl) playersEl.textContent = '0';
+        if (gidEl) { gidEl.classList.remove('updating'); void gidEl.offsetWidth; gidEl.classList.add('updating'); gidEl.textContent = '—'; }
+        if (markText) markText.textContent = 'No current mark data';
+        return;
+      }
+      const latest = data.rows[0];
+      if (playersEl) playersEl.textContent = String(latest.total_players || 0);
+      if (gidEl) {
+        gidEl.classList.remove('updating');
+        void gidEl.offsetWidth; // reflow to restart animation
+        gidEl.classList.add('updating');
+        gidEl.textContent = latest.game_id || '—';
+      }
+      if (markText) markText.textContent = latest.mark ? `Mark table: ${latest.mark}` : 'No current mark data';
+    })
+    .catch(() => {
+      if (requestId !== amountLoadRequest) return;
       if (markText) markText.textContent = 'Round data unavailable';
       showBackendError();
     });
