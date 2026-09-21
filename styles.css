@@ -583,6 +583,10 @@ main {
   align-items: center;
 }
 
+.game-id-display {
+  display: none;
+}
+
 .mini-header-item .mini-header-row,
 .mini-header-item .mini-header-pair {
   display: flex;
