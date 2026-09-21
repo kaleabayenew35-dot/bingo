@@ -56,19 +56,31 @@ function getSystemApiUrl() {
   return window.SYSTEM_API_URL || 'https://system-backend-jbnd.onrender.com/api';
 }
 
+function getBingoApiUrl() {
+  if (window.VITE_API_URL) return window.VITE_API_URL;
+  const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  return isLocal ? 'http://localhost:5000/api' : 'https://bingo-i1br.onrender.com/api';
+}
+
 async function resolveAuthState() {
   const state = parseAuthStateFromUrl();
   if (!state.launch) return state;
 
   try {
-    const response = await fetch(`${getSystemApiUrl()}/verify-launch-token`, {
+    // Bingo backend verifies the launch token server-to-server with the system backend.
+    // This avoids browser CORS failures and keeps the system response authoritative.
+    const response = await fetch(`${getBingoApiUrl()}/players/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ launch: state.launch }),
+      body: JSON.stringify({
+        launch: state.launch,
+        phone: state.phone === '-' ? '' : state.phone,
+        username: state.username === 'Guest' ? '' : state.username,
+      }),
     });
     const data = await response.json();
-    if (!response.ok || !data.valid || !data.user) {
-      throw new Error(data.reason || 'Launch token could not be verified');
+    if (!response.ok || !data.success || !data.user) {
+      throw new Error(data.error || 'Launch token could not be verified');
     }
 
     return {
