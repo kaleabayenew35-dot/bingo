@@ -588,9 +588,12 @@ main {
 }
 
 .players-counter {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
   gap: 7px;
   min-width: 58px;
+  margin-top: 4px;
 }
 
 .players-icon {
