@@ -845,10 +845,20 @@ function startPlayersPoll(amount) {
 
         // ── Update other players' bets from mark string ─────────────────
         const newOtherBets = parseMarkToOtherBets(latest.mark || '', authState.phone);
-        // Only re-render grid if other bets changed AND popup is not open
         const oldKeys = Object.keys(otherPlayersBets).sort().join(',');
         const newKeys = Object.keys(newOtherBets).sort().join(',');
         otherPlayersBets = newOtherBets;
+
+        // ── If any of my pending selectedNumbers got taken, deselect + close popup ──
+        const takenSelected = selectedNumbers.filter((n) => newOtherBets[n]);
+        if (takenSelected.length > 0) {
+          takenSelected.forEach((n) => {
+            const idx = selectedNumbers.indexOf(n);
+            if (idx !== -1) selectedNumbers.splice(idx, 1);
+          });
+          hideSelectionPopup();
+        }
+
         const popupOpen = selectionPopup && selectionPopup.classList.contains('open');
         if (oldKeys !== newKeys && !popupOpen) {
           renderNumberGrid(currentPageIndex);
