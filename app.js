@@ -688,7 +688,16 @@ function loadAmountData(amount) {
 
   const apiUrl = `${getEnvApiUrl()}/amount/${amount}`;
   fetch(apiUrl)
-    .then((r) => r.json())
+    .then(async (response) => {
+      const contentType = response.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await response.json()
+        : null;
+      if (!response.ok) {
+        throw new Error(`Amount API returned HTTP ${response.status}`);
+      }
+      return data;
+    })
     .then((data) => {
       if (requestId !== amountLoadRequest) return;
       if (!data) return;
