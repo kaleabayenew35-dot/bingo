@@ -5,7 +5,7 @@
 
 (function () {
   const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-  const API = window?.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://bingo-i1br.onrender.com/api');
+  const API = window?.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://bingo-backend-m1yf.onrender.com/api');
 
   // ── URL params ────────────────────────────────────────────
   const params   = new URLSearchParams(window.location.search);
