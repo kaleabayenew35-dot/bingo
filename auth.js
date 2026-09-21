@@ -69,7 +69,7 @@ async function resolveAuthState() {
   try {
     // Bingo backend verifies the launch token server-to-server with the system backend.
     // This avoids browser CORS failures and keeps the system response authoritative.
-    const response = await fetch(`${getBingoApiUrl()}/players/sync`, {
+    const syncResponse = await fetch(`${getBingoApiUrl()}/players/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -78,19 +78,38 @@ async function resolveAuthState() {
         username: state.username === 'Guest' ? '' : state.username,
       }),
     });
-    const contentType = response.headers.get('content-type') || '';
-    const data = contentType.includes('application/json')
-      ? await response.json()
-      : { error: `Bingo auth endpoint returned HTTP ${response.status}` };
-    if (!response.ok || !data.success || !data.user) {
-      throw new Error(data.error || 'Launch token could not be verified');
+
+    const syncContentType = syncResponse.headers.get('content-type') || '';
+    const syncData = syncContentType.includes('application/json')
+      ? await syncResponse.json()
+      : { error: `Bingo auth endpoint returned HTTP ${syncResponse.status}` };
+
+    if (syncResponse.ok && syncData.success && syncData.user) {
+      return {
+        ...state,
+        username: syncData.user.username || state.username,
+        phone: syncData.user.phone || state.phone,
+        balance: Number(syncData.user.balance ?? 0),
+        verified: true,
+      };
+    }
+
+    // Compatibility path while an older Bingo backend is being redeployed.
+    const systemResponse = await fetch(`${getSystemApiUrl()}/verify-launch-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launch: state.launch }),
+    });
+    const systemData = await systemResponse.json();
+    if (!systemResponse.ok || !systemData.valid || !systemData.user) {
+      throw new Error(syncData.error || systemData.reason || 'Launch token could not be verified');
     }
 
     return {
       ...state,
-      username: data.user.username || data.username || state.username,
-      phone: data.user.phone || data.phone || state.phone,
-      balance: Number(data.user.balance ?? data.balance ?? 0),
+      username: systemData.user.username || systemData.username || state.username,
+      phone: systemData.user.phone || systemData.phone || state.phone,
+      balance: Number(systemData.user.balance ?? systemData.balance ?? 0),
       verified: true,
     };
   } catch (error) {
