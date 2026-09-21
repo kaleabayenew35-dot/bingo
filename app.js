@@ -429,7 +429,9 @@ function showDashboard() {
 }
 
 function getEnvApiUrl() {
-  return window?.VITE_API_URL || 'http://localhost:5000/api';
+  if (window?.VITE_API_URL) return window.VITE_API_URL;
+  const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  return isLocal ? 'http://localhost:5000/api' : 'https://bingo-i1br.onrender.com/api';
 }
 
 function getCurrentUser() { return authState; }

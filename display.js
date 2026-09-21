@@ -4,7 +4,8 @@
 // When backend says done:true, redirect back to index.html.
 
 (function () {
-  const API = window?.VITE_API_URL || 'http://localhost:5000/api';
+  const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const API = window?.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://bingo-i1br.onrender.com/api');
 
   // ── URL params ────────────────────────────────────────────
   const params   = new URLSearchParams(window.location.search);
