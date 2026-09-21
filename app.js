@@ -65,6 +65,7 @@ let otherPlayersBets = {};   // e.g. { 1: ['BingoBot'], 5: ['LuckyLena', 'BingoB
 
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
+let playersPollInterval = null;   // live poll for players count + game ID
 let redirecting = false; // prevent double-redirect
 let timerEndpoint = null;
 let amountLoadRequest = 0;
@@ -136,6 +137,7 @@ function startRedirectCountdown(amount) {
 
       // Generate the 75-number draw on the backend BEFORE navigating
       // so display.js can immediately fetch and start revealing numbers
+      stopPlayersPoll();
       if (gameId) {
         fetch(`${getEnvApiUrl()}/draw/${gameId}/generate`, { method: 'POST' })
           .finally(() => {
@@ -409,6 +411,7 @@ function showDashboard() {
   const a = amountEl ? (parseInt((amountEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10) : 10;
   startTimerPoll(a);
   loadAmountData(a);
+  startPlayersPoll(a);
 }
 
 function getEnvApiUrl() {
@@ -623,6 +626,7 @@ function setupSelectDropdowns() {
       clearSelectedNumbers();
       const amount = parseInt((valueDisplay.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
       loadAmountData(amount);
+      startPlayersPoll(amount);
     };
 
     if (!trigger) {
@@ -686,6 +690,45 @@ function loadAmountData(amount) {
       if (markText) markText.textContent = 'Round data unavailable';
       showBackendError();
     });
+}
+
+// ── Live poll: update players count + game ID every 5 seconds ─────────────
+function startPlayersPoll(amount) {
+  // stop any existing poll first
+  if (playersPollInterval) { clearInterval(playersPollInterval); playersPollInterval = null; }
+
+  const poll = () => {
+    const apiUrl = `${getEnvApiUrl()}/amount/${amount}`;
+    fetch(apiUrl)
+      .then(async (r) => {
+        if (!r.ok) return null;
+        const contentType = r.headers.get('content-type') || '';
+        return contentType.includes('application/json') ? r.json() : null;
+      })
+      .then((data) => {
+        if (!data?.rows?.length) return;
+        const latest = data.rows[0];
+        const playersEl = document.getElementById('playersValue');
+        const gidEl = document.getElementById('gameIdValue');
+        // Only update if value actually changed — avoids unnecessary flicker
+        if (playersEl && playersEl.textContent !== String(latest.total_players || 0)) {
+          playersEl.textContent = String(latest.total_players || 0);
+        }
+        if (gidEl && gidEl.textContent !== (latest.game_id || '—')) {
+          gidEl.classList.remove('updating');
+          void gidEl.offsetWidth;
+          gidEl.classList.add('updating');
+          gidEl.textContent = latest.game_id || '—';
+        }
+      })
+      .catch(() => {}); // silent — poll will retry next tick
+  };
+
+  playersPollInterval = setInterval(poll, 5000);
+}
+
+function stopPlayersPoll() {
+  if (playersPollInterval) { clearInterval(playersPollInterval); playersPollInterval = null; }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
