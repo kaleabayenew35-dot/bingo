@@ -101,6 +101,41 @@ function parseMarkToOtherBets(markStr, myPhone) {
   return map;
 }
 
+// ── Restore own bets from mark string on page reload ───────────────────────
+// Finds own entries (matched by phone), rebuilds betEntries + bettedNumbers + betPlaced
+function restoreOwnBetsFromMark(markStr, myPhone) {
+  if (!markStr || !myPhone || myPhone === '-') return;
+  const myClean = String(myPhone).replace(/\D/g, '');
+  const restoredEntries = [];
+
+  markStr.split(',').forEach((entry) => {
+    entry = entry.trim();
+    if (!entry) return;
+    const colonIdx = entry.indexOf(':');
+    if (colonIdx === -1) return;
+    const beforeColon = entry.slice(0, colonIdx);
+    const numStr = entry.slice(colonIdx + 1);
+    const pipeIdx = beforeColon.indexOf('|');
+    const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
+    const entryPhoneClean = String(entryPhone || '').replace(/\D/g, '');
+    // only our own entries
+    const isOwn = myClean && entryPhoneClean && (
+      entryPhoneClean === myClean ||
+      entryPhoneClean.endsWith(myClean.slice(-9)) ||
+      myClean.endsWith(entryPhoneClean.slice(-9))
+    );
+    if (!isOwn) return;
+    const nums = numStr.split('|').map(Number).filter(Boolean);
+    if (nums.length > 0) restoredEntries.push({ numbers: nums });
+  });
+
+  if (restoredEntries.length > 0) {
+    betEntries = restoredEntries;
+    rebuildBettedNumbers();
+    betPlaced = true;
+  }
+}
+
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
 let playersPollInterval = null;   // live poll for players count + game ID
@@ -755,6 +790,10 @@ function loadAmountData(amount) {
         gidEl.textContent = latest.game_id || '—';
       }
       if (markText) markText.textContent = latest.mark ? `Mark table: ${latest.mark}` : 'No current mark data';
+      // ── Restore own bets from mark on reload (only if no active session bets) ──
+      if (!betPlaced) {
+        restoreOwnBetsFromMark(latest.mark || '', authState.phone);
+      }
       // ── Sync other players' bets from mark ─────────────────────────────
       otherPlayersBets = parseMarkToOtherBets(latest.mark || '', authState.phone);
       renderNumberGrid(currentPageIndex);
@@ -1067,6 +1106,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (!betRes.ok) {
           if (betRes.status === 402) {
             showStatus(`Insufficient balance. Your balance: $${data.balance ?? authState.balance}`, 'error');
+          } else if (betRes.status === 409) {
+            showStatus(`Number${data.conflict?.length > 1 ? 's' : ''} ${(data.conflict || []).join(', ')} already taken by another player.`, 'error');
+            // reload the grid so the taken numbers show orange
+            loadAmountData(a);
           } else {
             throw new Error(data.error || 'Bet failed');
           }
