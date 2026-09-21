@@ -60,6 +60,7 @@ let betEntries = [];         // array of { numbers: [...] } — one per placed b
 let pendingCancelEntry = null; // { numbers: [...] } set when user taps a teal number
 let betPlaced = false;       // true when at least one bet is active
 let popupOwner = null;       // popup state belongs only to the authenticated player in this page
+let popupInfoOnly = false;    // occupied numbers show information and cannot be bet
 
 // map: number → array of masked phones who have betted it (from other players)
 let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '2511****23'] }
@@ -68,9 +69,9 @@ let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '251
 function maskPhone(phone) {
   const s = String(phone || '').replace(/\s/g, '');
   if (s.length < 6) return s;
-  // keep first 4 chars and last 2 chars, mask the middle
-  const keep = 4;
-  const tail = 2;
+  // Keep enough digits to distinguish players with similar phone numbers.
+  const keep = 5;
+  const tail = 3;
   const middle = s.length - keep - tail;
   return s.slice(0, keep) + '*'.repeat(Math.max(middle, 2)) + s.slice(s.length - tail);
 }
@@ -258,6 +259,20 @@ function showSelectionPopup(tappedNumber, event) {
   if (!owner) return;
   popupOwner = owner;
   pendingCancelEntry = null;
+  popupInfoOnly = false;
+
+  const otherBettors = tappedNumber !== undefined ? otherPlayersBets[tappedNumber] : null;
+  if (otherBettors && otherBettors.length > 0 && !bettedNumbers.includes(tappedNumber)) {
+    selectedNumberText.textContent = String(tappedNumber);
+    popupInfoOnly = true;
+    if (betButton) {
+      betButton.disabled = true;
+      betButton.style.display = 'none';
+    }
+    updatePopupOtherBettors(tappedNumber);
+    selectionPopup.classList.add('open');
+    return;
+  }
 
   // ── Tapped own betted (teal) number → cancel flow ──
   if (tappedNumber !== undefined && bettedNumbers.includes(tappedNumber)) {
@@ -278,6 +293,8 @@ function showSelectionPopup(tappedNumber, event) {
   selectedNumberText.textContent = pending.length > 0 ? pending.join(', ') : '--';
 
   if (betButton) {
+    betButton.style.display = '';
+    betButton.disabled = false;
     if (betPlaced && pending.length > 0) betButton.textContent = 'Bet More';
     else betButton.textContent = 'Bet';
   }
@@ -304,9 +321,6 @@ function updatePopupOtherBettors(number) {
     const phones = others.map(p => `<code>${p}</code>`).join(', ');
     banner.innerHTML = `<span class="other-bettors-icon">⚠️</span> Already bet by: ${phones}`;
     banner.style.display = 'flex';
-    if (betButton && !bettedNumbers.includes(number)) {
-      betButton.textContent = betPlaced ? 'Bet More Anyway' : 'Bet Anyway';
-    }
   } else {
     banner.style.display = 'none';
   }
@@ -316,7 +330,12 @@ function hideSelectionPopup() {
   if (!selectionPopup) return;
   selectionPopup.classList.remove('open');
   popupOwner = null;
+  popupInfoOnly = false;
   pendingCancelEntry = null;
+  if (betButton) {
+    betButton.style.display = '';
+    betButton.disabled = false;
+  }
   // hide other-bettors banner
   const banner = document.getElementById('otherBettorsBanner');
   if (banner) banner.style.display = 'none';

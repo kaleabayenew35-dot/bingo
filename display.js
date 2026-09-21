@@ -167,6 +167,13 @@
   function buildBoard(entry) {
     const colOrder = ['B','I','N','G','O'];
     const cols = { B:[], I:[], N:[], G:[], O:[] };
+    const phoneDigits = String(entry.phone || '').replace(/\D/g, '');
+    const playerMarker = phoneDigits.length >= 5
+      ? phoneDigits.slice(3, 5)
+      : (entry.username || '?').charAt(0).toUpperCase();
+    const maskedPhone = phoneDigits.length >= 6
+      ? `${phoneDigits.slice(0, 5)}${'*'.repeat(Math.max(phoneDigits.length - 8, 2))}${phoneDigits.slice(-3)}`
+      : (entry.phone || '');
     entry.numbers.forEach((n) => { const c = bingoColumn(n); if (cols[c]) cols[c].push(n); });
 
     const colsHTML = colOrder.map((letter) => {
@@ -183,8 +190,11 @@
 
     return `<div class="player-board">
       <div class="player-board-header">
-        <div class="player-board-avatar">${(entry.username||'?').charAt(0).toUpperCase()}</div>
-        <div class="player-board-name">${entry.username}</div>
+        <div class="player-board-avatar">${playerMarker}</div>
+        <div class="player-board-identity">
+          <div class="player-board-name">${entry.username}</div>
+          <div class="player-board-phone">${maskedPhone}</div>
+        </div>
         <div class="player-board-count">${entry.numbers.length} number${entry.numbers.length!==1?'s':''}</div>
       </div>
       <div class="player-board-grid">${colsHTML}</div>
