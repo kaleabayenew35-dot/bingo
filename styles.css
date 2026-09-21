@@ -1770,6 +1770,183 @@ button {
   line-height: 1.4;
 }
 
+/* Responsive layout: preserve every control while allowing compact screens to reflow. */
+@media (max-width: 900px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .dashboard-header {
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 14px;
+  }
+
+  .dashboard-user {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+
+  .dashboard-center {
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-top: 4px;
+  }
+
+  .dashboard-right {
+    margin-left: auto;
+  }
+
+  .mini-header-card {
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+  }
+
+  .selection-popup-content {
+    min-width: 0;
+    width: min(92vw, 600px);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 8px;
+  }
+
+  .app-header {
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+
+  .app-brand {
+    gap: 10px;
+  }
+
+  .logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .brand-title {
+    font-size: 1.1rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.82rem;
+  }
+
+  .dashboard-header {
+    gap: 10px;
+    border-radius: 18px;
+  }
+
+  .dashboard-user {
+    flex-basis: 170px;
+  }
+
+  .dashboard-actions {
+    gap: 6px;
+  }
+
+  .dashboard-center {
+    gap: 10px;
+  }
+
+  .mini-header-card {
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .game-id-display {
+    min-width: 84px;
+  }
+
+  .mini-header-label,
+  .mini-header-name,
+  .mini-header-eq {
+    font-size: 0.68rem;
+  }
+
+  .amount-option {
+    min-width: 48px;
+    padding: 6px 9px;
+  }
+
+  .selection-popup {
+    top: 8px;
+  }
+
+  .selection-popup-content {
+    width: calc(100vw - 16px);
+    max-width: none;
+    padding: 14px;
+    gap: 12px;
+    border-radius: 18px;
+  }
+
+  .board-headers,
+  .selection-board {
+    gap: 6px;
+  }
+
+  .board-header-cell {
+    min-height: 34px;
+    border-radius: 9px;
+  }
+
+  .board-cell {
+    min-height: 44px;
+    border-radius: 9px;
+  }
+
+  .number-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .number-button {
+    min-height: 42px;
+    padding: 8px 0;
+  }
+
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .modal-container {
+    max-height: calc(100dvh - 16px);
+    border-radius: 18px;
+  }
+}
+
+@media (max-width: 380px) {
+  .dashboard-user {
+    flex-basis: 150px;
+  }
+
+  .username {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .balance {
+    white-space: nowrap;
+  }
+
+  .icon-button,
+  .menu-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .dashboard-center {
+    gap: 8px;
+  }
+}
+
 .other-bettors-icon {
   font-size: 1rem;
   flex-shrink: 0;

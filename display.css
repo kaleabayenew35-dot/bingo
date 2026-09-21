@@ -532,13 +532,37 @@
   .display-timer { font-size: 1.1rem; }
   .display-title { font-size: 0.85rem; }
 
-  .display-mini-header { flex-wrap: nowrap; overflow-x: auto; }
+  .display-mini-header { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .display-mini-header::-webkit-scrollbar { display: none; }
   .display-mini-item { min-width: 70px; padding: 8px 10px; }
 
-  .bingo-sidebar { width: 18%; }
-  .boards-area   { width: 82%; padding: 8px; }
+  .bingo-sidebar { width: 24%; }
+  .boards-area   { width: 76%; padding: 6px; }
 
   .bingo-col-letter { font-size: 0.75rem; }
 
-  .player-board { min-width: 160px; }
+  .player-board { min-width: 145px; }
+}
+
+@media (max-width: 420px) {
+  .display-header {
+    gap: 8px;
+    padding: 0 8px;
+  }
+
+  .display-header-left,
+  .display-header-right {
+    min-width: 0;
+  }
+
+  .display-title,
+  .display-player-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bingo-sidebar { width: 28%; }
+  .boards-area { width: 72%; }
+  .player-board { min-width: 132px; }
 }
