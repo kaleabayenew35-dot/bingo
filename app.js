@@ -66,6 +66,7 @@ let otherPlayersBets = {};   // e.g. { 1: ['BingoBot'], 5: ['LuckyLena', 'BingoB
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
 let redirecting = false; // prevent double-redirect
+let timerEndpoint = null;
 
 function formatTime(seconds) {
   const s = Math.max(0, Math.floor(seconds));
@@ -85,10 +86,24 @@ function startCountdown() {}
 function startTimerPoll(amount) {
   if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
   redirecting = false;
+  timerEndpoint = `${getEnvApiUrl()}/amount/${amount}/timer`;
 
   function fetchAndDisplay() {
-    fetch(`${getEnvApiUrl()}/amount/${amount}/timer`)
-      .then((r) => r.json())
+    fetch(timerEndpoint)
+      .then(async (response) => {
+        if (response.ok) return response.json();
+
+        // Compatibility with an older deployed Bingo backend while it is redeployed.
+        if (response.status === 404 && timerEndpoint.includes('/amount/')) {
+          timerEndpoint = `${getEnvApiUrl()}/stage/3/amount/${amount}/timer`;
+          const legacyResponse = await fetch(timerEndpoint);
+          if (legacyResponse.ok) return legacyResponse.json();
+        }
+
+        clearInterval(timerPollInterval);
+        timerPollInterval = null;
+        return null;
+      })
       .then((data) => {
         if (!data || typeof data.remaining !== 'number') return;
 
@@ -102,7 +117,10 @@ function startTimerPoll(amount) {
           startRedirectCountdown(amount);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        clearInterval(timerPollInterval);
+        timerPollInterval = null;
+      });
   }
 
   fetchAndDisplay();
