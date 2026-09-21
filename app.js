@@ -67,7 +67,7 @@ let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '251
 
 // ── Phone masking — 2519876543210 → 2519****10 ─────────────────────────────
 function maskPhone(phone) {
-  const s = String(phone || '').replace(/\s/g, '');
+  const s = normalizePhoneIdentity(phone);
   if (s.length < 6) return s;
   // Keep enough digits to distinguish players with similar phone numbers.
   const keep = 5;
@@ -76,12 +76,20 @@ function maskPhone(phone) {
   return s.slice(0, keep) + '*'.repeat(Math.max(middle, 2)) + s.slice(s.length - tail);
 }
 
+function normalizePhoneIdentity(phone) {
+  const clean = String(phone || '').replace(/\D/g, '');
+  if (!clean) return '';
+  if (clean.startsWith('251') && clean.length >= 12) return clean;
+  if (clean.startsWith('0') && clean.length >= 10) return `251${clean.slice(1)}`;
+  return clean;
+}
+
 // ── Parse mark string into { number → [maskedPhone, ...] } ─────────────────
 // Mark format: "username|phone:num1|num2,username2|phone2:num3"
 function parseMarkToOtherBets(markStr, myPhone) {
   const map = {};
   if (!markStr) return map;
-  const myClean = String(myPhone || '').replace(/\D/g, '');
+  const myClean = normalizePhoneIdentity(myPhone);
   markStr.split(',').forEach((entry) => {
     entry = entry.trim();
     if (!entry) return;
@@ -91,9 +99,9 @@ function parseMarkToOtherBets(markStr, myPhone) {
     const numStr = entry.slice(colonIdx + 1);
     const pipeIdx = beforeColon.indexOf('|');
     const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
-    const entryPhoneClean = String(entryPhone || '').replace(/\D/g, '');
+    const entryPhoneClean = normalizePhoneIdentity(entryPhone);
     // skip our own entries
-    if (myClean && entryPhoneClean && (entryPhoneClean === myClean || entryPhoneClean.endsWith(myClean.slice(-9)) || myClean.endsWith(entryPhoneClean.slice(-9)))) return;
+    if (myClean && entryPhoneClean && entryPhoneClean === myClean) return;
     const masked = maskPhone(entryPhoneClean || entryPhone);
     numStr.split('|').map(Number).filter(Boolean).forEach((num) => {
       if (!map[num]) map[num] = [];
@@ -107,7 +115,7 @@ function parseMarkToOtherBets(markStr, myPhone) {
 // Finds own entries (matched by phone), rebuilds betEntries + bettedNumbers + betPlaced
 function restoreOwnBetsFromMark(markStr, myPhone) {
   if (!markStr || !myPhone || myPhone === '-') return;
-  const myClean = String(myPhone).replace(/\D/g, '');
+  const myClean = normalizePhoneIdentity(myPhone);
   const restoredEntries = [];
 
   markStr.split(',').forEach((entry) => {
@@ -119,13 +127,9 @@ function restoreOwnBetsFromMark(markStr, myPhone) {
     const numStr = entry.slice(colonIdx + 1);
     const pipeIdx = beforeColon.indexOf('|');
     const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
-    const entryPhoneClean = String(entryPhone || '').replace(/\D/g, '');
+    const entryPhoneClean = normalizePhoneIdentity(entryPhone);
     // only our own entries
-    const isOwn = myClean && entryPhoneClean && (
-      entryPhoneClean === myClean ||
-      entryPhoneClean.endsWith(myClean.slice(-9)) ||
-      myClean.endsWith(entryPhoneClean.slice(-9))
-    );
+    const isOwn = myClean && entryPhoneClean && entryPhoneClean === myClean;
     if (!isOwn) return;
     const nums = numStr.split('|').map(Number).filter(Boolean);
     if (nums.length > 0) restoredEntries.push({ numbers: nums });
@@ -246,7 +250,7 @@ function rebuildBettedNumbers() {
 }
 
 function getPopupOwner() {
-  const phone = String(authState?.phone || '').replace(/\D/g, '');
+  const phone = normalizePhoneIdentity(authState?.phone);
   return phone || null;
 }
 
