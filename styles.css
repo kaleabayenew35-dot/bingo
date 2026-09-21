@@ -300,6 +300,7 @@ main {
   justify-content: center;
   gap: 12px;
   min-width: 120px;
+  margin-left: 0;
   color: var(--muted);
 }
 
@@ -1788,11 +1789,11 @@ button {
   }
 
   .dashboard-center {
-    order: 3;
-    flex: 1 1 100%;
+    order: 0;
+    flex: 0 1 auto;
     min-width: 0;
     justify-content: center;
-    padding-top: 4px;
+    padding-top: 0;
   }
 
   .dashboard-right {
