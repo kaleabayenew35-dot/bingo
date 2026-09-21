@@ -76,8 +76,10 @@ function formatTime(seconds) {
 }
 
 function formatDisplayGameId(gameId) {
-  const numericId = String(gameId || '').replace(/\D/g, '');
-  return numericId ? `A${numericId}` : 'A1';
+  const normalized = String(gameId || '').trim().toUpperCase();
+  if (/^[A-F]\d+$/.test(normalized)) return normalized;
+  const numericId = normalized.replace(/\D/g, '');
+  return numericId ? `A${numericId}` : '—';
 }
 
 // startCountdown is now a no-op — real timer comes from startTimerPoll
@@ -144,7 +146,7 @@ function startRedirectCountdown(amount) {
       const gidEl   = document.getElementById('gameIdValue');
       const plEl    = document.getElementById('playersValue');
       const markEl  = document.getElementById('markText');
-      const gameId  = (gidEl  ? gidEl.textContent  : '').replace(/^A/i, '').replace(/\D/g, '').trim() || '';
+      const gameId  = (gidEl ? gidEl.textContent : '').trim().replace(/^G-ID\s*=\s*/i, '') || '';
       const players = (plEl   ? plEl.textContent   : '').replace('joined', '').trim() || '0';
       const markRaw = (markEl ? markEl.textContent : '').replace('Mark table:', '').trim() || '';
 

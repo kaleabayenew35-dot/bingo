@@ -60,7 +60,9 @@
   }
 
   function formatDisplayGameId(id) {
-    const numericId = String(id || '').replace(/\D/g, '');
+    const normalized = String(id || '').trim().toUpperCase();
+    if (/^[A-F]\d+$/.test(normalized)) return normalized;
+    const numericId = normalized.replace(/\D/g, '');
     return numericId ? `A${numericId}` : '—';
   }
 
