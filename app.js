@@ -77,12 +77,12 @@ function formatTime(seconds) {
 // startCountdown is now a no-op — real timer comes from startTimerPoll
 function startCountdown() {}
 
-function startTimerPoll(stage, amount) {
+function startTimerPoll(amount) {
   if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
   redirecting = false;
 
   function fetchAndDisplay() {
-    fetch(`${getEnvApiUrl()}/stage/${stage}/amount/${amount}/timer`)
+    fetch(`${getEnvApiUrl()}/amount/${amount}/timer`)
       .then((r) => r.json())
       .then((data) => {
         if (!data || typeof data.remaining !== 'number') return;
@@ -94,7 +94,7 @@ function startTimerPoll(stage, amount) {
           redirecting = true;
           clearInterval(timerPollInterval);
           timerPollInterval = null;
-          startRedirectCountdown(stage, amount);
+          startRedirectCountdown(amount);
         }
       })
       .catch(() => {});
@@ -104,7 +104,7 @@ function startTimerPoll(stage, amount) {
   timerPollInterval = setInterval(fetchAndDisplay, 1000);
 }
 
-function startRedirectCountdown(stage, amount) {
+function startRedirectCountdown(amount) {
   let count = 3;
   if (countdownTimer) {
     countdownTimer.textContent = String(count);
@@ -135,7 +135,6 @@ function startRedirectCountdown(stage, amount) {
       // payout is calculated by display.js from the backend (total_players × amount)
 
       const query = new URLSearchParams({
-        stage:    String(stage),
         amount:   String(amount),
         gameId,
         players,
@@ -282,11 +281,9 @@ function renderSelectedNumbers() {
 }
 
 function getCurrentBetConfig() {
-  const stageElement = document.querySelector('.mini-header-select[data-select="stage"] .select-value');
   const amountElement = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
   return {
     gameId: `G-id=${gameIdValue?.textContent || '#BNG-4172'}`,
-    stage: stageElement?.textContent || 'Stage 1',
     amount: amountElement?.textContent || '$10',
   };
 }
@@ -301,12 +298,12 @@ function updateBetSummary() {
   }
   const numbers = selectedNumbers.length === 0 ? 'None' : selectedNumbers.join(', ');
   const statusText = betPlaced ? 'Placed' : 'Pending';
-  betSummaryText.textContent = `${betConfig.gameId} · ${betConfig.stage} · ${betConfig.amount} · Numbers: ${numbers} · ${statusText}`;
+  betSummaryText.textContent = `${betConfig.gameId} · ${betConfig.amount} · Numbers: ${numbers} · ${statusText}`;
   renderSelectedNumbers();
   refreshBetButtonState();
 }
 
-function refreshStageAmountControls() {
+function refreshAmountControls() {
   document.querySelectorAll('.mini-header-select .select-trigger').forEach((trigger) => {
     if (betPlaced) {
       trigger.disabled = true;
@@ -322,7 +319,7 @@ function refreshStageAmountControls() {
 
 function refreshBetButtonState() {
   if (!betButton) return;
-  refreshStageAmountControls();
+  refreshAmountControls();
 
   // if popup is open showing a cancel-entry, button already set by showSelectionPopup
   if (pendingCancelEntry) {
@@ -360,12 +357,10 @@ function clearSelectedNumbers() {
   betPlaced = false;
   otherPlayersBets = {};
   renderNumberGrid(currentPageIndex);
-  const stageElInit = document.querySelector('.mini-header-select[data-select="stage"] .select-value');
   const amountElInit = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-  if (stageElInit && amountElInit) {
-    const si = parseInt((stageElInit.textContent || '').replace(/[^0-9]/g, ''), 10) || 1;
+  if (amountElInit) {
     const ai = parseInt((amountElInit.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
-    loadStageData(si, ai);
+    loadAmountData(ai);
   }
   updateBetSummary();
 }
@@ -418,14 +413,11 @@ function goToPage(index) {
 function showDashboard() {
   loadingScreen.classList.remove('screen-visible');
   dashboardScreen.classList.add('screen-visible');
-  // start the timer poll for the currently selected stage/amount
-  const stageEl = document.querySelector('.mini-header-select[data-select="stage"] .select-value');
+  // start the timer poll for the currently selected amount
   const amountEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-  const s = stageEl ? (parseInt((stageEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 1) : 1;
   const a = amountEl ? (parseInt((amountEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10) : 10;
-  startTimerPoll(s, a);
-  // load stage data now that auth is confirmed and phone is valid
-  loadStageData(s, a);
+  startTimerPoll(a);
+  loadAmountData(a);
 }
 
 function getEnvApiUrl() {
@@ -549,7 +541,7 @@ function renderHistoryContent(dbHistory) {
         <span class="history-item-icon">🎯</span>
         <div class="history-item-info">
           <div class="history-item-label">Bet Placed</div>
-          <div class="history-item-detail">Game #${h.gameId} · Stage ${h.stage} · $${h.amount}</div>
+          <div class="history-item-detail">Game #${h.gameId} · $${h.amount}</div>
           <div class="history-item-numbers">Numbers: ${h.numbers.join(', ')}</div>
         </div>
       </div>
@@ -566,7 +558,7 @@ function renderHistoryContent(dbHistory) {
         <span class="history-item-icon">❌</span>
         <div class="history-item-info">
           <div class="history-item-label">Bet Canceled</div>
-          <div class="history-item-detail">Game ${h.gameId} · ${h.stage} · $${h.amount}</div>
+          <div class="history-item-detail">Game ${h.gameId} · $${h.amount}</div>
           <div class="history-item-numbers">Numbers: ${h.numbers.join(', ')}</div>
         </div>
       </div>
@@ -576,10 +568,10 @@ function renderHistoryContent(dbHistory) {
   historyContent.innerHTML = cancelRows + dbRows || `<div class="history-empty"><span class="history-empty-icon">📋</span><p>No bet history yet.</p></div>`;
 }
 
-function addHistoryEntry(type, gameId, stage, amount, numbers) {
+function addHistoryEntry(type, gameId, amount, numbers) {
   const now = new Date();
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  betHistory.push({ type, gameId, stage, amount, numbers: [...numbers], time });
+  betHistory.push({ type, gameId, amount, numbers: [...numbers], time });
 }
 
 function openHelpModal() { openModal(helpModal); }
@@ -631,7 +623,7 @@ function setupSelectDropdowns() {
     trigger.addEventListener('click', (event) => {
       if (betPlaced) {
         event.stopPropagation();
-        showStatus('Cancel your active bets before changing stage or amount.', 'error');
+        showStatus('Cancel your active bets before changing amount.', 'error');
         return;
       }
       event.stopPropagation();
@@ -650,27 +642,25 @@ function setupSelectDropdowns() {
         select.classList.remove('open');
         trigger.setAttribute('aria-expanded', 'false');
         clearSelectedNumbers();
-        const stageEl = document.querySelector('.mini-header-select[data-select="stage"] .select-value');
         const amountEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-        if (stageEl && amountEl) {
-          const s = parseInt((stageEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 1;
+        if (amountEl) {
           const a = parseInt((amountEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
-          startTimerPoll(s, a);
-          loadStageData(s, a);
+          startTimerPoll(a);
+          loadAmountData(a);
         }
       });
     });
   });
 }
 
-function loadStageData(stage, amount) {
+function loadAmountData(amount) {
   // guard: do not parse mark if phone is not authenticated yet
   const myPhone = authState.phone;
   if (!myPhone || myPhone === '-' || myPhone === '') {
     // still fetch to show game id / players count, but skip mark parsing
   }
 
-  const apiUrl = `${getEnvApiUrl()}/stage/${stage}/amount/${amount}`;
+  const apiUrl = `${getEnvApiUrl()}/amount/${amount}`;
   fetch(apiUrl)
     .then((r) => r.json())
     .then((data) => {
@@ -761,7 +751,7 @@ function loadStageData(stage, amount) {
       }
       updateBetSummary();
     })
-    .catch((err) => { console.warn('Failed to load stage data', err); });
+    .catch((err) => { console.warn('Failed to load amount data', err); });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -780,12 +770,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       authState = e.detail;
       if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
       if (window.auth && window.auth.hideAuthModal) window.auth.hideAuthModal();
-      // now that phone is available, reload stage data so marks are parsed correctly
-      const stEl = document.querySelector('.mini-header-select[data-select="stage"] .select-value');
       const amEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-      const s2 = stEl ? (parseInt((stEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 1) : 1;
       const a2 = amEl ? (parseInt((amEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10) : 10;
-      loadStageData(s2, a2);
+      loadAmountData(a2);
       setTimeout(advanceLoading, 900);
       window.removeEventListener('auth:changed', onAuthChanged);
     };
@@ -850,9 +837,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (betButton) {
     betButton.addEventListener('click', async () => {
-      const stageEl = document.querySelector('.mini-header-select[data-select="stage"] .select-value');
       const amountEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-      const s = parseInt((stageEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 1;
       const a = parseInt((amountEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
 
       // ── Cancel a specific bet entry (tapped a teal number) ──
@@ -860,7 +845,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const entryNums = [...pendingCancelEntry.numbers];
         showStatus('Canceling bet...', 'loading', 0);
         try {
-          const res = await fetch(`${getEnvApiUrl()}/stage/${s}/amount/${a}/cancel`, {
+          const res = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: authState.phone, numbers: entryNums }),
@@ -872,13 +857,13 @@ window.addEventListener('DOMContentLoaded', async () => {
           rebuildBettedNumbers();
           pendingCancelEntry = null;
           betPlaced = betEntries.length > 0;
-          addHistoryEntry('canceled', gameIdValue ? gameIdValue.textContent : '-', `Stage ${s}`, a, entryNums);
+          addHistoryEntry('canceled', gameIdValue ? gameIdValue.textContent : '-', a, entryNums);
           hideSelectionPopup();
           if (betEntries.length === 0 && markText) markText.textContent = 'No current mark data';
           renderNumberGrid(currentPageIndex);
           updateBetSummary();
           refreshBetButtonState();
-          loadStageData(s, a);
+          loadAmountData(a);
           showStatus('Bet canceled successfully', 'success');
         } catch (err) {
           console.error('Cancel failed', err);
@@ -892,7 +877,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const allNums = [...bettedNumbers];
         showStatus('Canceling all bets...', 'loading', 0);
         try {
-          const res = await fetch(`${getEnvApiUrl()}/stage/${s}/amount/${a}/cancel`, {
+          const res = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: authState.phone }),
@@ -907,11 +892,11 @@ window.addEventListener('DOMContentLoaded', async () => {
           document.querySelectorAll('.number-button').forEach((btn) => btn.classList.remove('betted', 'active'));
           hideSelectionPopup();
           if (markText) markText.textContent = 'No current mark data';
-          addHistoryEntry('canceled', gameIdValue ? gameIdValue.textContent : '-', `Stage ${s}`, a, allNums);
+          addHistoryEntry('canceled', gameIdValue ? gameIdValue.textContent : '-', a, allNums);
           updateBetSummary();
           refreshBetButtonState();
           renderNumberGrid(currentPageIndex);
-          loadStageData(s, a);
+          loadAmountData(a);
           showStatus('All bets canceled successfully', 'success');
         } catch (err) {
           console.error('Cancel all failed', err);
@@ -935,7 +920,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       try {
         showStatus('Placing bet...', 'loading', 0);
-        const res = await fetch(`${getEnvApiUrl()}/stage/${s}/amount/${a}/bet`, {
+        const res = await fetch(`${getEnvApiUrl()}/amount/${a}/bet`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -947,12 +932,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         betEntries.push(newEntry);
         rebuildBettedNumbers();
         selectedNumbers = [];
-        addHistoryEntry('placed', data.result.gameId, `Stage ${s}`, a, newEntry.numbers);
+        addHistoryEntry('placed', data.result.gameId, a, newEntry.numbers);
         renderNumberGrid(currentPageIndex);
         updateBetSummary();
         refreshBetButtonState();
         hideSelectionPopup();
-        loadStageData(s, a);
+        loadAmountData(a);
         showStatus(`Bet accepted in game ${data.result.gameId}`, 'success');
       } catch (err) {
         console.error('Bet failed', err);

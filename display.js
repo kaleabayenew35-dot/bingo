@@ -9,7 +9,6 @@
 
   // ── URL params ────────────────────────────────────────────
   const params   = new URLSearchParams(window.location.search);
-  const stage    = parseInt(params.get('stage')   || '1',  10);
   const amount   = parseInt(params.get('amount')  || '10', 10);
   const gameId   = params.get('gameId')   || '';
   const players  = params.get('players')  || '0';
@@ -27,7 +26,6 @@
   const displayPage       = document.getElementById('displayPage');
   const displayTimer      = document.getElementById('displayTimer');
   const dspGameId         = document.getElementById('dspGameId');
-  const dspStage          = document.getElementById('dspStage');
   const dspAmount         = document.getElementById('dspAmount');
   const dspPlayers        = document.getElementById('dspPlayers');
   const dspPayout         = document.getElementById('dspPayout');
@@ -222,7 +220,6 @@
 
   function populateMiniHeader(gid, pl, po) {
     if (dspGameId)  dspGameId.textContent  = gid ? `#${gid}` : '—';
-    if (dspStage)   dspStage.textContent   = `Stage ${stage}`;
     if (dspAmount)  dspAmount.textContent  = `$${amount}`;
     if (dspPlayers) dspPlayers.textContent = String(pl || '0');
     if (dspPayout)  dspPayout.textContent  = parseInt(po, 10) > 0 ? `$${po}` : '—';
@@ -230,7 +227,7 @@
   }
 
   function refreshFromBackend() {
-    fetch(`${API}/stage/${stage}/amount/${amount}`)
+    fetch(`${API}/amount/${amount}`)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.rows || !data.rows.length) return;
