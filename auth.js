@@ -78,7 +78,10 @@ async function resolveAuthState() {
         username: state.username === 'Guest' ? '' : state.username,
       }),
     });
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json')
+      ? await response.json()
+      : { error: `Bingo auth endpoint returned HTTP ${response.status}` };
     if (!response.ok || !data.success || !data.user) {
       throw new Error(data.error || 'Launch token could not be verified');
     }
