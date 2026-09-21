@@ -493,9 +493,7 @@ function renderNumberGrid(pageIndex = 0) {
         return;
       }
       if (isOther) {
-        // someone else's number — show a brief info toast, never open popup
-        const others = otherPlayersBets[value] || [];
-        showCenterToast('cancel', `Number ${value} Taken`, `Bet by: ${others.join(', ')}`);
+        // taken by someone else — do nothing, no popup, no toast
         return;
       }
       // free number — select and open popup
