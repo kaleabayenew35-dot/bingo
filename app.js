@@ -68,6 +68,13 @@ let timerPollInterval = null;
 let redirecting = false; // prevent double-redirect
 let timerEndpoint = null;
 let amountLoadRequest = 0;
+let backendErrorShown = false;
+
+function showBackendError() {
+  if (backendErrorShown) return;
+  backendErrorShown = true;
+  showStatus('Bingo service is temporarily unavailable. Please try again later.', 'error', 0);
+}
 
 function formatTime(seconds) {
   const s = Math.max(0, Math.floor(seconds));
@@ -91,6 +98,7 @@ function startTimerPoll(amount) {
 
         clearInterval(timerPollInterval);
         timerPollInterval = null;
+        showBackendError();
         return null;
       })
       .then((data) => {
@@ -109,6 +117,7 @@ function startTimerPoll(amount) {
       .catch(() => {
         clearInterval(timerPollInterval);
         timerPollInterval = null;
+        showBackendError();
       });
   }
 
@@ -794,7 +803,7 @@ function loadAmountData(amount) {
       const playersEl = document.getElementById('playersValue');
       if (gidEl) gidEl.textContent = '—';
       if (playersEl) playersEl.textContent = '0';
-      console.warn('Failed to load amount data', err);
+      showBackendError();
     });
 }
 
