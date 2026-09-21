@@ -265,9 +265,6 @@ function showSelectionPopup(tappedNumber) {
   const pending = [...selectedNumbers].sort((a, b) => a - b);
   selectedNumberText.textContent = pending.length > 0 ? pending.join(', ') : '--';
 
-  // show who else betted the tapped number (if any)
-  updatePopupOtherBettors(tappedNumber);
-
   if (betButton) {
     if (betPlaced && pending.length > 0) betButton.textContent = 'Bet More';
     else betButton.textContent = 'Bet';
@@ -492,11 +489,18 @@ function renderNumberGrid(pageIndex = 0) {
 
     button.addEventListener('click', () => {
       if (isBetted) {
-        showSelectionPopup(value); // cancel flow
+        showSelectionPopup(value); // own teal number → cancel flow
         return;
       }
+      if (isOther) {
+        // someone else's number — show a brief info toast, never open popup
+        const others = otherPlayersBets[value] || [];
+        showCenterToast('cancel', `Number ${value} Taken`, `Bet by: ${others.join(', ')}`);
+        return;
+      }
+      // free number — select and open popup
       toggleNumberSelection(value);
-      showSelectionPopup(value);  // shows warning if others betted this number
+      showSelectionPopup(value);
     });
     numberGrid.appendChild(button);
   }
@@ -796,7 +800,11 @@ function loadAmountData(amount) {
       }
       // ── Sync other players' bets from mark ─────────────────────────────
       otherPlayersBets = parseMarkToOtherBets(latest.mark || '', authState.phone);
-      renderNumberGrid(currentPageIndex);
+      // Don't re-render grid if popup is open — would destroy the popup's context
+      const popupIsOpen = selectionPopup && selectionPopup.classList.contains('open');
+      if (!popupIsOpen) {
+        renderNumberGrid(currentPageIndex);
+      }
     })
     .catch(() => {
       if (requestId !== amountLoadRequest) return;
@@ -839,14 +847,13 @@ function startPlayersPoll(amount) {
 
         // ── Update other players' bets from mark string ─────────────────
         const newOtherBets = parseMarkToOtherBets(latest.mark || '', authState.phone);
-        // Only re-render grid if other bets changed
+        // Only re-render grid if other bets changed AND popup is not open
         const oldKeys = Object.keys(otherPlayersBets).sort().join(',');
         const newKeys = Object.keys(newOtherBets).sort().join(',');
-        if (oldKeys !== newKeys) {
-          otherPlayersBets = newOtherBets;
+        otherPlayersBets = newOtherBets;
+        const popupOpen = selectionPopup && selectionPopup.classList.contains('open');
+        if (oldKeys !== newKeys && !popupOpen) {
           renderNumberGrid(currentPageIndex);
-        } else {
-          otherPlayersBets = newOtherBets;
         }
       })
       .catch(() => {}); // silent — poll will retry next tick
