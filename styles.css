@@ -321,9 +321,10 @@ main {
 
 .selection-popup {
   position: fixed;
-  top: 20px;
+  top: auto;
+  bottom: 20px;
   left: 50%;
-  transform: translateX(-50%) translateY(-20px);
+  transform: translateX(-50%) translateY(20px);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
@@ -1884,7 +1885,8 @@ button {
   }
 
   .selection-popup {
-    top: 8px;
+    top: auto;
+    bottom: 8px;
   }
 
   .selection-popup-content {
