@@ -789,7 +789,13 @@ function loadAmountData(amount) {
       }
       updateBetSummary();
     })
-    .catch((err) => { console.warn('Failed to load amount data', err); });
+    .catch((err) => {
+      const gidEl = document.getElementById('gameIdValue');
+      const playersEl = document.getElementById('playersValue');
+      if (gidEl) gidEl.textContent = '—';
+      if (playersEl) playersEl.textContent = '0';
+      console.warn('Failed to load amount data', err);
+    });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
