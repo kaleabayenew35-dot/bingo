@@ -244,6 +244,41 @@ function hideSelectionPopup() {
 
 let statusTimeout = null;
 
+// ── Center toast — large centered confirmation for bet / cancel ────────────
+let centerToastTimeout = null;
+function showCenterToast(type, title, sub = '') {
+  const overlay = document.getElementById('centerToastOverlay');
+  const toast   = document.getElementById('centerToast');
+  const icon    = document.getElementById('centerToastIcon');
+  const titleEl = document.getElementById('centerToastTitle');
+  const subEl   = document.getElementById('centerToastSub');
+  if (!overlay || !toast) return;
+
+  // clear any running timer
+  if (centerToastTimeout) { clearTimeout(centerToastTimeout); centerToastTimeout = null; }
+
+  icon.textContent    = type === 'success' ? '✅' : '❌';
+  titleEl.textContent = title;
+  subEl.textContent   = sub;
+
+  toast.className = `center-toast toast-${type === 'success' ? 'success' : 'cancel'}`;
+  overlay.style.display = 'flex';
+
+  // trigger transition
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => toast.classList.add('visible'));
+  });
+
+  centerToastTimeout = setTimeout(() => {
+    toast.classList.add('hiding');
+    toast.classList.remove('visible');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      toast.classList.remove('hiding');
+    }, 320);
+  }, 1800);
+}
+
 function showStatus(message, type = 'info', duration = 3000) {
   if (!statusBanner || !statusMessage) return;
   statusMessage.textContent = message;
@@ -900,6 +935,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           refreshBetButtonState();
           loadAmountData(a);
           const refundMsg = cancelData.refundAmount ? ` · $${cancelData.refundAmount} refunded` : '';
+          showCenterToast('cancel', 'Bet Canceled', `Refunded$${cancelData.refundAmount || 0}`);
           showStatus(`Bet canceled${refundMsg}`, 'success');
         } catch (err) {
           console.error('Cancel failed', err);
@@ -944,6 +980,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           renderNumberGrid(currentPageIndex);
           loadAmountData(a);
           const refundMsg = cancelData.refundAmount ? ` · $${cancelData.refundAmount} refunded` : '';
+          showCenterToast('cancel', 'All Bets Canceled', `Refunded $${cancelData.refundAmount || 0}`);
           showStatus(`All bets canceled${refundMsg}`, 'success');
         } catch (err) {
           console.error('Cancel all failed', err);
@@ -1000,6 +1037,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         refreshBetButtonState();
         hideSelectionPopup();
         loadAmountData(a);
+        showCenterToast('success', 'Bet Placed!', `Game ${data.gameId}`);
         showStatus(`Bet placed on game ${data.gameId}`, 'success');
       } catch (err) {
         console.error('Bet failed', err);
