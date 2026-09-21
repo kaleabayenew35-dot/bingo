@@ -1413,6 +1413,18 @@ button {
   gap: 10px;
 }
 
+.history-round-summary {
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(212, 160, 23, 0.24);
+  border-radius: 12px;
+  background: rgba(212, 160, 23, 0.08);
+  color: var(--cream);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .history-empty {
   text-align: center;
   padding: 32px 16px;

@@ -29,6 +29,7 @@ const historyModalClose = document.getElementById('historyModalClose');
 const helpModal = document.getElementById('helpModal');
 const helpModalClose = document.getElementById('helpModalClose');
 const historyContent = document.getElementById('historyContent');
+const historyRoundSummary = document.getElementById('historyRoundSummary');
 
 // In-session bet history log
 const betHistory = [];
@@ -674,13 +675,34 @@ function flipToggle(key, ...toggleEls) {
 }
 
 function openHistoryModal() {
-  // always fetch fresh from database
+  // Refresh the current amount round and player history from the backend every time.
+  const amount = getSelectedAmount();
+  if (historyRoundSummary) historyRoundSummary.textContent = 'Loading current round...';
+  loadAmountData(amount);
+
+  fetch(`${getEnvApiUrl()}/amount/${amount}`)
+    .then((response) => response.ok ? response.json() : null)
+    .then((data) => {
+      const row = data?.rows?.[0];
+      if (!historyRoundSummary) return;
+      if (!row) {
+        historyRoundSummary.textContent = `Amount $${amount} · No active round data`;
+        return;
+      }
+      const mark = row.mark || 'No bets yet';
+      historyRoundSummary.textContent = `Game ${row.game_id || '—'} · Amount $${amount} · Players ${row.total_players || 0} · Mark: ${mark}`;
+    })
+    .catch(() => {
+      if (historyRoundSummary) historyRoundSummary.textContent = 'Current round data unavailable';
+    });
+
   const phone = authState.phone;
   if (!phone || phone === '-') {
     renderHistoryContent([]);
     openModal(historyModal);
     return;
   }
+  historyContent.textContent = 'Loading bet history...';
   fetch(`${getEnvApiUrl()}/players/history?phone=${encodeURIComponent(phone)}`)
     .then((r) => r.json())
     .then((data) => {
