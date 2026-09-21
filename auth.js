@@ -78,15 +78,23 @@ async function resolveAuthState() {
     const systemData = systemContentType.includes('application/json')
       ? await systemResponse.json()
       : { reason: `System auth endpoint returned HTTP ${systemResponse.status}` };
-    if (!systemResponse.ok || !systemData.valid || !systemData.user) {
+
+    // verify-launch-token returns { valid, phone, username, balance } at top level
+    // (no nested user object)
+    if (!systemResponse.ok || !systemData.valid) {
       throw new Error(systemData.reason || 'Launch token could not be verified');
     }
 
+    // support both flat { phone, username, balance } and nested { user: { ... } }
+    const phone    = systemData.phone    ?? systemData.user?.phone    ?? state.phone;
+    const username = systemData.username ?? systemData.user?.username ?? state.username;
+    const balance  = systemData.balance  ?? systemData.user?.balance  ?? 0;
+
     return {
       ...state,
-      username: systemData.user.username || systemData.username || state.username,
-      phone: systemData.user.phone || systemData.phone || state.phone,
-      balance: Number(systemData.user.balance ?? systemData.balance ?? 0),
+      username,
+      phone,
+      balance: Number(balance),
       verified: true,
     };
   } catch (error) {

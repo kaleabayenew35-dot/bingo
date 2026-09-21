@@ -751,8 +751,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       try {
         const systemApiUrl = (window.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api');
 
-        // If we have a launch token, use verify-launch-token to get the freshest balance
         if (authState.launch) {
+          // verify-launch-token returns { valid, phone, username, balance } — balance is top-level
           const res = await fetch(`${systemApiUrl}/verify-launch-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -760,14 +760,19 @@ window.addEventListener('DOMContentLoaded', async () => {
           });
           if (res.ok) {
             const data = await res.json();
-            if (data.valid && data.user) {
-              authState = { ...authState, balance: Number(data.user.balance ?? authState.balance) };
+            if (data.valid) {
+              // balance is top-level in response (not inside data.user)
+              const freshBalance = data.balance ?? data.user?.balance ?? null;
+              if (freshBalance != null) {
+                authState = { ...authState, balance: Number(freshBalance) };
+              }
             }
           }
         } else {
           // Re-sync via bingo backend player sync
           await syncPlayerWithBingoBackend();
         }
+
         if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
         refreshBetButtonState();
         showStatus('Balance updated', 'success', 2000);
