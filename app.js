@@ -793,14 +793,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  try {
-    await syncPlayerWithBingoBackend();
-  } catch (error) {
-    console.error('[bingo-auth] player sync failed:', error.message);
-    showStatus('Unable to sync your Bingo account. Please try again.', 'error', 0);
-    return;
-  }
-
   setTimeout(advanceLoading, 900);
 
   if (menuToggle) menuToggle.addEventListener('click', openSidebar);

@@ -58,39 +58,37 @@ function getBingoApiUrl() {
   return isLocal ? 'http://localhost:5000/api' : 'https://bingo-i1br.onrender.com/api';
 }
 
+function getSystemApiUrl() {
+  return window.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api';
+}
+
 async function resolveAuthState() {
   const state = parseAuthStateFromUrl();
   if (!state.launch) return state;
 
   try {
-    // Bingo backend verifies the launch token server-to-server with the system backend.
-    // This avoids browser CORS failures and keeps the system response authoritative.
-    const syncResponse = await fetch(`${getBingoApiUrl()}/players/sync`, {
+    const systemResponse = await fetch(`${getSystemApiUrl()}/verify-launch-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         launch: state.launch,
-        phone: state.phone === '-' ? '' : state.phone,
-        username: state.username === 'Guest' ? '' : state.username,
       }),
     });
-
-    const syncContentType = syncResponse.headers.get('content-type') || '';
-    const syncData = syncContentType.includes('application/json')
-      ? await syncResponse.json()
-      : { error: `Bingo auth endpoint returned HTTP ${syncResponse.status}` };
-
-    if (syncResponse.ok && syncData.success && syncData.user) {
-      return {
-        ...state,
-        username: syncData.user.username || state.username,
-        phone: syncData.user.phone || state.phone,
-        balance: Number(syncData.user.balance ?? 0),
-        verified: true,
-      };
+    const systemContentType = systemResponse.headers.get('content-type') || '';
+    const systemData = systemContentType.includes('application/json')
+      ? await systemResponse.json()
+      : { reason: `System auth endpoint returned HTTP ${systemResponse.status}` };
+    if (!systemResponse.ok || !systemData.valid || !systemData.user) {
+      throw new Error(systemData.reason || 'Launch token could not be verified');
     }
 
-    throw new Error(syncData.error || 'Bingo backend is not updated for system authentication');
+    return {
+      ...state,
+      username: systemData.user.username || systemData.username || state.username,
+      phone: systemData.user.phone || systemData.phone || state.phone,
+      balance: Number(systemData.user.balance ?? systemData.balance ?? 0),
+      verified: true,
+    };
   } catch (error) {
     console.error('[bingo-auth] system verification failed:', error.message);
     return { ...state, verified: false, balance: 0 };
