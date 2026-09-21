@@ -59,6 +59,7 @@ let bettedNumbers = [];      // flat union of all confirmed bet numbers (grid di
 let betEntries = [];         // array of { numbers: [...] } — one per placed bet
 let pendingCancelEntry = null; // { numbers: [...] } set when user taps a teal number
 let betPlaced = false;       // true when at least one bet is active
+let popupOwner = null;       // popup state belongs only to the authenticated player in this page
 
 // map: number → array of masked phones who have betted it (from other players)
 let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '2511****23'] }
@@ -243,8 +244,19 @@ function rebuildBettedNumbers() {
   bettedNumbers = flat;
 }
 
-function showSelectionPopup(tappedNumber) {
+function getPopupOwner() {
+  const phone = String(authState?.phone || '').replace(/\D/g, '');
+  return phone || null;
+}
+
+function showSelectionPopup(tappedNumber, event) {
   if (!selectionPopup || !selectedNumberText) return;
+  // The popup is strictly local UI. Backend polling and synthetic events must
+  // never open it for a different player or restore another player's state.
+  if (!event || !event.isTrusted) return;
+  const owner = getPopupOwner();
+  if (!owner) return;
+  popupOwner = owner;
   pendingCancelEntry = null;
 
   // ── Tapped own betted (teal) number → cancel flow ──
@@ -302,6 +314,7 @@ function updatePopupOtherBettors(number) {
 function hideSelectionPopup() {
   if (!selectionPopup) return;
   selectionPopup.classList.remove('open');
+  popupOwner = null;
   pendingCancelEntry = null;
   // hide other-bettors banner
   const banner = document.getElementById('otherBettorsBanner');
@@ -487,9 +500,9 @@ function renderNumberGrid(pageIndex = 0) {
     if (isBetted) button.classList.add('betted');
     else if (isOther) button.classList.add('other-betted');
 
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
       if (isBetted) {
-        showSelectionPopup(value); // own teal number → cancel flow
+        showSelectionPopup(value, event); // own teal number → cancel flow
         return;
       }
       if (isOther) {
@@ -498,7 +511,7 @@ function renderNumberGrid(pageIndex = 0) {
       }
       // free number — select and open popup
       toggleNumberSelection(value);
-      showSelectionPopup(value);
+      showSelectionPopup(value, event);
     });
     numberGrid.appendChild(button);
   }
