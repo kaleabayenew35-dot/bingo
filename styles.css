@@ -1902,13 +1902,14 @@ button {
   }
 
   .number-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
   }
 
   .number-button {
-    min-height: 42px;
-    padding: 8px 0;
+    min-height: 36px;
+    padding: 6px 0;
+    font-size: 0.78rem;
   }
 
   .modal-overlay {
