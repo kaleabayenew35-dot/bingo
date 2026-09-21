@@ -100,7 +100,10 @@ async function resolveAuthState() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ launch: state.launch }),
     });
-    const systemData = await systemResponse.json();
+    const systemContentType = systemResponse.headers.get('content-type') || '';
+    const systemData = systemContentType.includes('application/json')
+      ? await systemResponse.json()
+      : { reason: `System auth endpoint returned HTTP ${systemResponse.status}` };
     if (!systemResponse.ok || !systemData.valid || !systemData.user) {
       throw new Error(syncData.error || systemData.reason || 'Launch token could not be verified');
     }

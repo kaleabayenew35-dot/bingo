@@ -449,7 +449,10 @@ async function syncPlayerWithBingoBackend() {
       balance: authState.balance,
     }),
   });
-  const data = await response.json();
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json')
+    ? await response.json()
+    : { error: `Bingo player sync endpoint returned HTTP ${response.status}` };
   if (!response.ok || !data.user) {
     throw new Error(data.error || 'Bingo player synchronization failed');
   }
