@@ -408,11 +408,9 @@ function renderNumberGrid(pageIndex = 0) {
     button.textContent = String(value);
     const isBetted = bettedNumbers.includes(value);          // my bet — teal
     const isOther = !isBetted && !!otherPlayersBets[value];  // others' bet — orange
-    const isSelected = selectedNumbers.includes(value);      // pending — blue
 
     if (isBetted) button.classList.add('betted');
     else if (isOther) button.classList.add('other-betted');
-    else if (isSelected) button.classList.add('active');
 
     button.addEventListener('click', () => {
       if (isBetted) {
