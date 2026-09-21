@@ -852,6 +852,28 @@ main {
   align-items: center;
 }
 
+.amount-header-row {
+  flex-shrink: 0;
+}
+
+.amount-current {
+  display: none;
+}
+
+.amount-options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.amount-options::-webkit-scrollbar {
+  display: none;
+}
+
 .mini-header-label {
   font-size: 0.75rem;
   color: var(--muted);
@@ -922,6 +944,31 @@ main {
 
 .select-item.active {
   color: var(--gold-light);
+}
+
+.amount-option {
+  width: auto;
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 7px 11px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+}
+
+.amount-option:hover,
+.amount-option.active {
+  background: rgba(212, 160, 23, 0.16);
+  border-color: var(--gold);
+  color: var(--gold-light);
+}
+
+.amount-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .number-grid-section {
@@ -1071,6 +1118,15 @@ button {
   .mini-header-item {
     padding: 2px 6px;
     min-height: 20px;
+  }
+
+  .mini-header-select[data-select="amount"] {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .amount-options {
+    flex: 1 1 auto;
   }
 
   .select-trigger {

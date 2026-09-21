@@ -304,7 +304,7 @@ function updateBetSummary() {
 }
 
 function refreshAmountControls() {
-  document.querySelectorAll('.mini-header-select .select-trigger').forEach((trigger) => {
+  document.querySelectorAll('.amount-option').forEach((trigger) => {
     if (betPlaced) {
       trigger.disabled = true;
       trigger.classList.add('select-trigger-disabled');
@@ -618,7 +618,27 @@ function setupSelectDropdowns() {
     const trigger = select.querySelector('.select-trigger');
     const valueDisplay = select.querySelector('.select-value');
     const items = select.querySelectorAll('.select-item');
-    if (!trigger) return;
+    const selectAmount = (item, event) => {
+      event.stopPropagation();
+      if (betPlaced) {
+        showStatus('Cancel your active bets before changing amount.', 'error');
+        return;
+      }
+      valueDisplay.textContent = item.dataset.value || item.textContent;
+      items.forEach((btn) => btn.classList.remove('active'));
+      item.classList.add('active');
+      select.classList.remove('open');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      clearSelectedNumbers();
+      const amount = parseInt((valueDisplay.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
+      startTimerPoll(amount);
+      loadAmountData(amount);
+    };
+
+    if (!trigger) {
+      items.forEach((item) => item.addEventListener('click', (event) => selectAmount(item, event)));
+      return;
+    }
 
     trigger.addEventListener('click', (event) => {
       if (betPlaced) {
@@ -633,22 +653,7 @@ function setupSelectDropdowns() {
     });
 
     items.forEach((item) => {
-      item.addEventListener('click', (event) => {
-        event.stopPropagation();
-        const selectedValue = item.dataset.value || item.textContent;
-        valueDisplay.textContent = selectedValue;
-        items.forEach((btn) => btn.classList.remove('active'));
-        item.classList.add('active');
-        select.classList.remove('open');
-        trigger.setAttribute('aria-expanded', 'false');
-        clearSelectedNumbers();
-        const amountEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
-        if (amountEl) {
-          const a = parseInt((amountEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
-          startTimerPoll(a);
-          loadAmountData(a);
-        }
-      });
+      item.addEventListener('click', (event) => selectAmount(item, event));
     });
   });
 }
