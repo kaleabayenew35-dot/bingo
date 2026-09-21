@@ -655,12 +655,34 @@ function setupSelectDropdowns() {
 }
 
 function loadAmountData(amount) {
-  amountLoadRequest += 1;
-  const playersEl = document.getElementById('playersValue');
-  const gidEl = document.getElementById('gameIdValue');
-  if (playersEl) playersEl.textContent = '0';
-  if (gidEl) gidEl.textContent = '—';
-  if (markText) markText.textContent = 'Round data unavailable';
+  const requestId = ++amountLoadRequest;
+  const apiUrl = `${getEnvApiUrl()}/amount/${amount}`;
+
+  fetch(apiUrl)
+    .then(async (response) => {
+      const contentType = response.headers.get('content-type') || '';
+      const data = contentType.includes('application/json') ? await response.json() : null;
+      if (!response.ok) throw new Error(`Amount API returned HTTP ${response.status}`);
+      return data;
+    })
+    .then((data) => {
+      if (requestId !== amountLoadRequest || !data?.rows?.length) return;
+      const latest = data.rows[0];
+      const playersEl = document.getElementById('playersValue');
+      const gidEl = document.getElementById('gameIdValue');
+      if (playersEl) playersEl.textContent = String(latest.total_players || 0);
+      if (gidEl) gidEl.textContent = latest.game_id || '—';
+      if (markText) markText.textContent = latest.mark ? `Mark table: ${latest.mark}` : 'No current mark data';
+    })
+    .catch((error) => {
+      if (requestId !== amountLoadRequest) return;
+      const playersEl = document.getElementById('playersValue');
+      const gidEl = document.getElementById('gameIdValue');
+      if (playersEl) playersEl.textContent = '0';
+      if (gidEl) gidEl.textContent = '—';
+      if (markText) markText.textContent = 'Round data unavailable';
+      showBackendError();
+    });
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
