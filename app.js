@@ -95,13 +95,6 @@ function startTimerPoll(amount) {
       .then(async (response) => {
         if (response.ok) return response.json();
 
-        // Compatibility with an older deployed Bingo backend while it is redeployed.
-        if (response.status === 404 && timerEndpoint.includes('/amount/')) {
-          timerEndpoint = `${getEnvApiUrl()}/stage/3/amount/${amount}/timer`;
-          const legacyResponse = await fetch(timerEndpoint);
-          if (legacyResponse.ok) return legacyResponse.json();
-        }
-
         clearInterval(timerPollInterval);
         timerPollInterval = null;
         return null;
@@ -328,16 +321,25 @@ function updateBetSummary() {
   refreshBetButtonState();
 }
 
+function getSelectedAmount() {
+  const amountElement = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
+  return parseInt((amountElement?.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
+}
+
 function refreshAmountControls() {
   document.querySelectorAll('.amount-option').forEach((trigger) => {
-    if (betPlaced) {
+    const amount = parseInt(trigger.dataset.value || '', 10);
+    const balanceBlocked = Number(authState.balance || 0) < amount;
+    if (betPlaced || balanceBlocked) {
       trigger.disabled = true;
       trigger.classList.add('select-trigger-disabled');
       trigger.setAttribute('aria-disabled', 'true');
+      if (balanceBlocked) trigger.title = 'Insufficient balance';
     } else {
       trigger.disabled = false;
       trigger.classList.remove('select-trigger-disabled');
       trigger.setAttribute('aria-disabled', 'false');
+      trigger.removeAttribute('title');
     }
   });
 }
@@ -368,10 +370,11 @@ function refreshBetButtonState() {
     return;
   }
 
-  const shouldDisable = selectedNumbers.length === 0;
+  const insufficientBalance = getSelectedAmount() > Number(authState.balance || 0);
+  const shouldDisable = selectedNumbers.length === 0 || insufficientBalance;
   betButton.disabled = shouldDisable;
   betButton.classList.toggle('disabled', shouldDisable);
-  betButton.textContent = 'Bet';
+  betButton.textContent = insufficientBalance ? 'Insufficient Balance' : 'Bet';
 }
 
 function clearSelectedNumbers() {
@@ -800,6 +803,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       authState = e.detail;
       if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
       if (window.auth && window.auth.hideAuthModal) window.auth.hideAuthModal();
+      refreshBetButtonState();
       const amEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
       const a2 = amEl ? (parseInt((amEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10) : 10;
       loadAmountData(a2);
@@ -869,6 +873,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     betButton.addEventListener('click', async () => {
       const amountEl = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
       const a = parseInt((amountEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
+
+      if (a > Number(authState.balance || 0) && !pendingCancelEntry && !(betPlaced && selectedNumbers.length === 0)) {
+        showStatus('Your balance is too low for this amount.', 'error');
+        refreshBetButtonState();
+        return;
+      }
 
       // ── Cancel a specific bet entry (tapped a teal number) ──
       if (pendingCancelEntry) {
