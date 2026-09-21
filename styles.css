@@ -883,6 +883,10 @@ main {
   flex-shrink: 0;
 }
 
+.mini-header-select[data-select="amount"] {
+  order: -1;
+}
+
 .amount-current {
   display: none;
 }
