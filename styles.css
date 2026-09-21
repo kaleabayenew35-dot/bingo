@@ -135,6 +135,7 @@ main {
   display: block;
   opacity: 1;
   transform: translateY(0);
+  position: relative; /* contains the absolute-positioned selection popup */
 }
 
 .loading-card,
@@ -363,7 +364,7 @@ main {
 }
 
 .selection-popup {
-  position: fixed;
+  position: absolute;
   top: auto;
   bottom: 20px;
   left: 50%;
@@ -372,12 +373,14 @@ main {
   visibility: hidden;
   transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
   z-index: 50;
+  pointer-events: none;
 }
 
 .selection-popup.open {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
 }
 
 .selection-popup-content {
