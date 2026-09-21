@@ -786,8 +786,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         const entryNums = [...pendingCancelEntry.numbers];
         showStatus('Canceling bet...', 'loading', 0);
         try {
-          throw new Error('Bingo amount API is disabled');
-          // remove this entry from betEntries
+          const cancelRes = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: authState.phone, numbers: entryNums }),
+          });
+          const cancelData = await cancelRes.json();
+          if (!cancelRes.ok) throw new Error(cancelData.error || 'Cancel failed');
+
           betEntries = betEntries.filter((e) => e !== pendingCancelEntry);
           rebuildBettedNumbers();
           pendingCancelEntry = null;
@@ -812,7 +818,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         const allNums = [...bettedNumbers];
         showStatus('Canceling all bets...', 'loading', 0);
         try {
-          throw new Error('Bingo amount API is disabled');
+          const cancelRes = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: authState.phone }),
+          });
+          const cancelData = await cancelRes.json();
+          if (!cancelRes.ok) throw new Error(cancelData.error || 'Cancel failed');
+
           betPlaced = false;
           betEntries = [];
           bettedNumbers = [];
@@ -840,28 +853,49 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const payload = {
-        phone: authState.phone,
-        username: authState.username,
-        balance: authState.balance,
-        numbers: [...selectedNumbers],
-      };
-
       try {
         showStatus('Placing bet...', 'loading', 0);
-        throw new Error('Bingo amount API is disabled');
+
+        const betRes = await fetch(`${getEnvApiUrl()}/amount/${a}/bet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: authState.phone,
+            username: authState.username,
+            balance: authState.balance,
+            numbers: [...selectedNumbers],
+            launch: authState.launch || undefined,
+          }),
+        });
+        const data = await betRes.json();
+        if (!betRes.ok) {
+          if (betRes.status === 402) {
+            showStatus(`Insufficient balance. Your balance: $${data.balance ?? authState.balance}`, 'error');
+          } else {
+            throw new Error(data.error || 'Bet failed');
+          }
+          refreshBetButtonState();
+          return;
+        }
+
+        // ── Update local balance from server response ──
+        if (data.newBalance != null) {
+          authState = { ...authState, balance: data.newBalance };
+          if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+        }
+
         betPlaced = true;
         const newEntry = { numbers: [...selectedNumbers] };
         betEntries.push(newEntry);
         rebuildBettedNumbers();
         selectedNumbers = [];
-        addHistoryEntry('placed', data.result.gameId, a, newEntry.numbers);
+        addHistoryEntry('placed', data.gameId || (gameIdValue ? gameIdValue.textContent : '-'), a, newEntry.numbers);
         renderNumberGrid(currentPageIndex);
         updateBetSummary();
         refreshBetButtonState();
         hideSelectionPopup();
         loadAmountData(a);
-        showStatus(`Bet accepted in game ${data.result.gameId}`, 'success');
+        showStatus(`Bet placed on game ${data.gameId}`, 'success');
       } catch (err) {
         console.error('Bet failed', err);
         showStatus(`Failed to place bet: ${err.message || err}`, 'error');
