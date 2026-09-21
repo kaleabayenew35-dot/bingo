@@ -52,10 +52,6 @@ function parseAuthStateFromUrl() {
   };
 }
 
-function getSystemApiUrl() {
-  return window.SYSTEM_API_URL || 'https://system-backend-jbnd.onrender.com/api';
-}
-
 function getBingoApiUrl() {
   if (window.VITE_API_URL) return window.VITE_API_URL;
   const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
@@ -94,27 +90,7 @@ async function resolveAuthState() {
       };
     }
 
-    // Compatibility path while an older Bingo backend is being redeployed.
-    const systemResponse = await fetch(`${getSystemApiUrl()}/verify-launch-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ launch: state.launch }),
-    });
-    const systemContentType = systemResponse.headers.get('content-type') || '';
-    const systemData = systemContentType.includes('application/json')
-      ? await systemResponse.json()
-      : { reason: `System auth endpoint returned HTTP ${systemResponse.status}` };
-    if (!systemResponse.ok || !systemData.valid || !systemData.user) {
-      throw new Error(syncData.error || systemData.reason || 'Launch token could not be verified');
-    }
-
-    return {
-      ...state,
-      username: systemData.user.username || systemData.username || state.username,
-      phone: systemData.user.phone || systemData.phone || state.phone,
-      balance: Number(systemData.user.balance ?? systemData.balance ?? 0),
-      verified: true,
-    };
+    throw new Error(syncData.error || 'Bingo backend is not updated for system authentication');
   } catch (error) {
     console.error('[bingo-auth] system verification failed:', error.message);
     return { ...state, verified: false, balance: 0 };
@@ -157,7 +133,6 @@ function hideAuthModal() {
 window.auth = {
   getAuthState,
   resolveAuthState,
-  getSystemApiUrl,
   sampleUsers,
   updateAuthUi,
   isAuthenticated,
