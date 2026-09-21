@@ -67,6 +67,7 @@ let otherPlayersBets = {};   // e.g. { 1: ['BingoBot'], 5: ['LuckyLena', 'BingoB
 let timerPollInterval = null;
 let redirecting = false; // prevent double-redirect
 let timerEndpoint = null;
+let amountLoadRequest = 0;
 
 function formatTime(seconds) {
   const s = Math.max(0, Math.floor(seconds));
@@ -75,11 +76,13 @@ function formatTime(seconds) {
   return `${minutes}:${remainder}`;
 }
 
-function formatDisplayGameId(gameId) {
+function formatDisplayGameId(gameId, amount) {
   const normalized = String(gameId || '').trim().toUpperCase();
   if (/^[A-F]\d+$/.test(normalized)) return normalized;
   const numericId = normalized.replace(/\D/g, '');
-  return numericId ? `A${numericId}` : '—';
+  const prefixes = { 10: 'A', 20: 'B', 30: 'C', 50: 'D', 100: 'E', 200: 'F' };
+  const prefix = prefixes[Number(amount)] || 'A';
+  return numericId ? `${prefix}${numericId}` : '—';
 }
 
 // startCountdown is now a no-op — real timer comes from startTimerPoll
@@ -685,6 +688,7 @@ function setupSelectDropdowns() {
 }
 
 function loadAmountData(amount) {
+  const requestId = ++amountLoadRequest;
   // guard: do not parse mark if phone is not authenticated yet
   const myPhone = authState.phone;
   if (!myPhone || myPhone === '-' || myPhone === '') {
@@ -695,6 +699,7 @@ function loadAmountData(amount) {
   fetch(apiUrl)
     .then((r) => r.json())
     .then((data) => {
+      if (requestId !== amountLoadRequest) return;
       if (!data) return;
       const playersEl = document.getElementById('playersValue');
       if (!playersEl) return;
@@ -704,7 +709,9 @@ function loadAmountData(amount) {
         const total = latest.total_players || data.rows.reduce((acc, r) => acc + (r.total_players || 0), 0);
         playersEl.textContent = String(total);
         const gidEl = document.getElementById('gameIdValue');
-        if (gidEl) gidEl.textContent = latest.game_id ? formatDisplayGameId(latest.game_id) : gidEl.textContent;
+        if (gidEl) gidEl.textContent = latest.game_id
+          ? formatDisplayGameId(latest.game_id, amount)
+          : gidEl.textContent;
 
         const mark = latest.mark || '';
         if (markText) markText.textContent = mark ? `Mark table: ${mark}` : 'No current mark data';
