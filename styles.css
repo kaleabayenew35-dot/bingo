@@ -1778,19 +1778,25 @@ button {
   }
 
   .dashboard-header {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     padding: 12px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .dashboard-header::-webkit-scrollbar {
+    display: none;
   }
 
   .dashboard-user {
-    flex: 1 1 220px;
+    flex: 1 1 auto;
     min-width: 0;
   }
 
   .dashboard-center {
     order: 0;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
     justify-content: center;
     padding-top: 0;
@@ -1798,6 +1804,7 @@ button {
 
   .dashboard-right {
     margin-left: auto;
+    flex: 0 0 auto;
   }
 
   .mini-header-card {
@@ -1843,7 +1850,7 @@ button {
   }
 
   .dashboard-user {
-    flex-basis: 170px;
+    flex-basis: auto;
   }
 
   .dashboard-actions {
@@ -1923,30 +1930,62 @@ button {
 }
 
 @media (max-width: 380px) {
+  .dashboard-header {
+    gap: 6px;
+    padding: 8px;
+  }
+
   .dashboard-user {
-    flex-basis: 150px;
+    gap: 6px;
+    flex-basis: auto;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
   }
 
   .username {
-    max-width: 110px;
+    max-width: 58px;
+    font-size: 0.78rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .balance {
+    font-size: 0.68rem;
     white-space: nowrap;
   }
 
   .icon-button,
   .menu-button {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .dashboard-actions {
+    gap: 4px;
   }
 
   .dashboard-center {
-    gap: 8px;
+    gap: 6px;
   }
+
+  .countdown-timer {
+    font-size: 0.82rem;
+  }
+
+  .players-counter {
+    min-width: 42px;
+    gap: 3px;
+  }
+
+  .players-icon {
+    font-size: 0.82rem;
+  }
+
 }
 
 .other-bettors-icon {

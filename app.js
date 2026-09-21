@@ -288,7 +288,7 @@ function renderSelectedNumbers() {
 function getCurrentBetConfig() {
   const amountElement = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
   return {
-    gameId: `G-id=${gameIdValue?.textContent || 'A1'}`,
+    gameId: `G-id=${gameIdValue?.textContent || '—'}`,
     amount: amountElement?.textContent || '$10',
   };
 }
@@ -750,6 +750,8 @@ function loadAmountData(amount) {
         refreshBetButtonState();
       } else {
         playersEl.textContent = '0';
+        const gidEl = document.getElementById('gameIdValue');
+        if (gidEl) gidEl.textContent = '—';
         if (markText) markText.textContent = 'No current mark data';
         betPlaced = false;
         betEntries = [];
