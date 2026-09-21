@@ -89,40 +89,7 @@ function startCountdown() {}
 function startTimerPoll(amount) {
   if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
   redirecting = false;
-  timerEndpoint = `${getEnvApiUrl()}/amount/${amount}/timer`;
-
-  function fetchAndDisplay() {
-    fetch(timerEndpoint)
-      .then(async (response) => {
-        if (response.ok) return response.json();
-
-        clearInterval(timerPollInterval);
-        timerPollInterval = null;
-        showBackendError();
-        return null;
-      })
-      .then((data) => {
-        if (!data || typeof data.remaining !== 'number') return;
-
-        if (countdownTimer) countdownTimer.textContent = formatTime(data.remaining);
-
-        // when timer hits 0, do a 3-second visual countdown then redirect
-        if (data.remaining <= 0 && !redirecting) {
-          redirecting = true;
-          clearInterval(timerPollInterval);
-          timerPollInterval = null;
-          startRedirectCountdown(amount);
-        }
-      })
-      .catch(() => {
-        clearInterval(timerPollInterval);
-        timerPollInterval = null;
-        showBackendError();
-      });
-  }
-
-  fetchAndDisplay();
-  timerPollInterval = setInterval(fetchAndDisplay, 1000);
+  if (countdownTimer) countdownTimer.textContent = '--:--';
 }
 
 function startRedirectCountdown(amount) {
@@ -688,123 +655,12 @@ function setupSelectDropdowns() {
 }
 
 function loadAmountData(amount) {
-  const requestId = ++amountLoadRequest;
-  // guard: do not parse mark if phone is not authenticated yet
-  const myPhone = authState.phone;
-  if (!myPhone || myPhone === '-' || myPhone === '') {
-    // still fetch to show game id / players count, but skip mark parsing
-  }
-
-  const apiUrl = `${getEnvApiUrl()}/amount/${amount}`;
-  fetch(apiUrl)
-    .then(async (response) => {
-      const contentType = response.headers.get('content-type') || '';
-      const data = contentType.includes('application/json')
-        ? await response.json()
-        : null;
-      if (!response.ok) {
-        throw new Error(`Amount API returned HTTP ${response.status}`);
-      }
-      return data;
-    })
-    .then((data) => {
-      if (requestId !== amountLoadRequest) return;
-      if (!data) return;
-      const playersEl = document.getElementById('playersValue');
-      if (!playersEl) return;
-
-      if (data.rows && data.rows.length) {
-        const latest = data.rows[0];
-        const total = latest.total_players || data.rows.reduce((acc, r) => acc + (r.total_players || 0), 0);
-        playersEl.textContent = String(total);
-        const gidEl = document.getElementById('gameIdValue');
-        if (gidEl) gidEl.textContent = latest.game_id || '—';
-
-        const mark = latest.mark || '';
-        if (markText) markText.textContent = mark ? `Mark table: ${mark}` : 'No current mark data';
-
-        // Re-read authState.phone here (not from outer closure) so it's always current
-        const currentPhone = authState.phone;
-        const phoneValid = currentPhone && currentPhone !== '-' && currentPhone !== '';
-
-        const allEntries = mark.split(',').map((s) => s.trim()).filter(Boolean);
-
-        // Parse each entry — supports both formats:
-        //   new: "username|phone:num1|num2"
-        //   old: "phone:num1|num2"
-        const myRawEntries = [];
-        const newOtherBets = {};
-
-        allEntries.forEach((entry) => {
-          const colonIdx = entry.indexOf(':');
-          if (colonIdx === -1) return;
-
-          const beforeColon = entry.slice(0, colonIdx); // "username|phone" OR "phone"
-          const numStr = entry.slice(colonIdx + 1);     // "num1|num2"
-          const nums = numStr.split('|').map((n) => parseInt(n, 10)).filter(Boolean);
-          if (nums.length === 0) return;
-
-          const pipeIdx = beforeColon.indexOf('|');
-          let entryUsername, entryPhone;
-          if (pipeIdx !== -1) {
-            entryUsername = beforeColon.slice(0, pipeIdx);
-            entryPhone = beforeColon.slice(pipeIdx + 1);
-          } else {
-            entryPhone = beforeColon;
-            entryUsername = entryPhone;
-          }
-
-          // only classify as "mine" if phone is valid and matches exactly
-          if (phoneValid && entryPhone === currentPhone) {
-            myRawEntries.push({ entry, nums });
-          } else {
-            nums.forEach((n) => {
-              if (!newOtherBets[n]) newOtherBets[n] = [];
-              if (!newOtherBets[n].includes(entryUsername)) {
-                newOtherBets[n].push(entryUsername);
-              }
-            });
-          }
-        });
-
-        otherPlayersBets = newOtherBets;
-
-        if (myRawEntries.length > 0) {
-          betPlaced = true;
-          betEntries = myRawEntries.map((e) => ({ numbers: e.nums }));
-          rebuildBettedNumbers();
-          selectedNumbers = selectedNumbers.filter((n) => !bettedNumbers.includes(n));
-          renderNumberGrid(currentPageIndex);
-        } else {
-          betPlaced = false;
-          betEntries = [];
-          bettedNumbers = [];
-          selectedNumbers = [];
-          renderNumberGrid(currentPageIndex);
-        }
-        refreshBetButtonState();
-      } else {
-        playersEl.textContent = '0';
-        const gidEl = document.getElementById('gameIdValue');
-        if (gidEl) gidEl.textContent = '—';
-        if (markText) markText.textContent = 'No current mark data';
-        betPlaced = false;
-        betEntries = [];
-        bettedNumbers = [];
-        selectedNumbers = [];
-        otherPlayersBets = {};
-        renderNumberGrid(currentPageIndex);
-        refreshBetButtonState();
-      }
-      updateBetSummary();
-    })
-    .catch((err) => {
-      const gidEl = document.getElementById('gameIdValue');
-      const playersEl = document.getElementById('playersValue');
-      if (gidEl) gidEl.textContent = '—';
-      if (playersEl) playersEl.textContent = '0';
-      showBackendError();
-    });
+  amountLoadRequest += 1;
+  const playersEl = document.getElementById('playersValue');
+  const gidEl = document.getElementById('gameIdValue');
+  if (playersEl) playersEl.textContent = '0';
+  if (gidEl) gidEl.textContent = '—';
+  if (markText) markText.textContent = 'Round data unavailable';
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -905,13 +761,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const entryNums = [...pendingCancelEntry.numbers];
         showStatus('Canceling bet...', 'loading', 0);
         try {
-          const res = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: authState.phone, numbers: entryNums }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data && data.message ? data.message : 'Failed to cancel bet');
+          throw new Error('Bingo amount API is disabled');
           // remove this entry from betEntries
           betEntries = betEntries.filter((e) => e !== pendingCancelEntry);
           rebuildBettedNumbers();
@@ -937,13 +787,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const allNums = [...bettedNumbers];
         showStatus('Canceling all bets...', 'loading', 0);
         try {
-          const res = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: authState.phone }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data && data.message ? data.message : 'Failed to cancel bets');
+          throw new Error('Bingo amount API is disabled');
           betPlaced = false;
           betEntries = [];
           bettedNumbers = [];
@@ -980,13 +824,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       try {
         showStatus('Placing bet...', 'loading', 0);
-        const res = await fetch(`${getEnvApiUrl()}/amount/${a}/bet`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data && data.message ? data.message : 'Failed to place bet');
+        throw new Error('Bingo amount API is disabled');
         betPlaced = true;
         const newEntry = { numbers: [...selectedNumbers] };
         betEntries.push(newEntry);
