@@ -48,7 +48,40 @@ function parseAuthStateFromUrl() {
     token,
     launch,
     balance,
+    verified: false,
   };
+}
+
+function getSystemApiUrl() {
+  return window.SYSTEM_API_URL || 'https://system-backend-jbnd.onrender.com/api';
+}
+
+async function resolveAuthState() {
+  const state = parseAuthStateFromUrl();
+  if (!state.launch) return state;
+
+  try {
+    const response = await fetch(`${getSystemApiUrl()}/verify-launch-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ launch: state.launch }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.valid || !data.user) {
+      throw new Error(data.reason || 'Launch token could not be verified');
+    }
+
+    return {
+      ...state,
+      username: data.user.username || data.username || state.username,
+      phone: data.user.phone || data.phone || state.phone,
+      balance: Number(data.user.balance ?? data.balance ?? 0),
+      verified: true,
+    };
+  } catch (error) {
+    console.error('[bingo-auth] system verification failed:', error.message);
+    return { ...state, verified: false, balance: 0 };
+  }
 }
 
 function updateAuthUi(state) {
@@ -67,8 +100,8 @@ function getAuthState() {
 }
 
 function isAuthenticated(state) {
-  const hasSecureParams = state && state.token && state.token !== 'none' && state.launch;
-  const hasLegacyParams = state && state.token && state.token !== 'none' && state.username && state.username !== 'Guest' && state.phone && state.phone !== '-';
+  const hasSecureParams = state && state.launch && state.verified;
+  const hasLegacyParams = state && !state.launch && state.token && state.token !== 'none' && state.username && state.username !== 'Guest' && state.phone && state.phone !== '-';
   return Boolean(hasSecureParams || hasLegacyParams);
 }
 
@@ -86,6 +119,8 @@ function hideAuthModal() {
 
 window.auth = {
   getAuthState,
+  resolveAuthState,
+  getSystemApiUrl,
   sampleUsers,
   updateAuthUi,
   isAuthenticated,

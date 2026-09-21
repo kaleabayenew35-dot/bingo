@@ -3,7 +3,7 @@ const dashboardScreen = document.getElementById('dashboardScreen');
 const startChatBtn = document.getElementById('startChatBtn');
 const loadingStatus = document.querySelector('.loading-status');
 const countdownTimer = document.getElementById('countdownTimer');
-let authState = window.auth && window.auth.getAuthState ? window.auth.getAuthState() : { username: 'Guest', phone: '-', token: 'none', balance: 0 };
+let authState = window.auth && window.auth.getAuthState ? window.auth.getAuthState() : { username: 'Guest', phone: '-', token: 'none', balance: 0, verified: false };
 const numberGrid = document.getElementById('numberGrid');
 const prevPageBtn = document.getElementById('prevPage');
 const nextPageBtn = document.getElementById('nextPage');
@@ -434,6 +434,33 @@ function getEnvApiUrl() {
 
 function getCurrentUser() { return authState; }
 
+async function syncPlayerWithBingoBackend() {
+  if (!authState.phone || authState.phone === '-' || !authState.verified) return;
+
+  const response = await fetch(`${getEnvApiUrl()}/players/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      launch: authState.launch,
+      username: authState.username,
+      phone: authState.phone,
+      balance: authState.balance,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok || !data.user) {
+    throw new Error(data.error || 'Bingo player synchronization failed');
+  }
+
+  authState = {
+    ...authState,
+    username: data.user.username || authState.username,
+    phone: data.user.phone || authState.phone,
+    balance: Number(data.user.balance ?? authState.balance),
+  };
+  if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+}
+
 function advanceLoading() {
   if (currentStep < statusSteps.length) {
     loadingStatus.textContent = statusSteps[currentStep];
@@ -732,7 +759,12 @@ function loadStageData(stage, amount) {
     .catch((err) => { console.warn('Failed to load stage data', err); });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  if (window.auth && window.auth.resolveAuthState) {
+    authState = await window.auth.resolveAuthState();
+    if (window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
+  }
+
   if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
   setupSelectDropdowns();
 
@@ -753,6 +785,14 @@ window.addEventListener('DOMContentLoaded', () => {
       window.removeEventListener('auth:changed', onAuthChanged);
     };
     window.addEventListener('auth:changed', onAuthChanged);
+    return;
+  }
+
+  try {
+    await syncPlayerWithBingoBackend();
+  } catch (error) {
+    console.error('[bingo-auth] player sync failed:', error.message);
+    showStatus('Unable to sync your Bingo account. Please try again.', 'error', 0);
     return;
   }
 
