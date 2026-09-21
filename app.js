@@ -74,6 +74,11 @@ function formatTime(seconds) {
   return `${minutes}:${remainder}`;
 }
 
+function formatDisplayGameId(gameId) {
+  const numericId = String(gameId || '').replace(/\D/g, '');
+  return numericId ? `A${numericId}` : 'A1';
+}
+
 // startCountdown is now a no-op — real timer comes from startTimerPoll
 function startCountdown() {}
 
@@ -121,7 +126,7 @@ function startRedirectCountdown(amount) {
       const gidEl   = document.getElementById('gameIdValue');
       const plEl    = document.getElementById('playersValue');
       const markEl  = document.getElementById('markText');
-      const gameId  = (gidEl  ? gidEl.textContent  : '').replace('#', '').trim() || '';
+      const gameId  = (gidEl  ? gidEl.textContent  : '').replace(/^A/i, '').replace(/\D/g, '').trim() || '';
       const players = (plEl   ? plEl.textContent   : '').replace('joined', '').trim() || '0';
       const markRaw = (markEl ? markEl.textContent : '').replace('Mark table:', '').trim() || '';
 
@@ -283,7 +288,7 @@ function renderSelectedNumbers() {
 function getCurrentBetConfig() {
   const amountElement = document.querySelector('.mini-header-select[data-select="amount"] .select-value');
   return {
-    gameId: `G-id=${gameIdValue?.textContent || '#BNG-4172'}`,
+    gameId: `G-id=${gameIdValue?.textContent || 'A1'}`,
     amount: amountElement?.textContent || '$10',
   };
 }
@@ -678,7 +683,7 @@ function loadAmountData(amount) {
         const total = latest.total_players || data.rows.reduce((acc, r) => acc + (r.total_players || 0), 0);
         playersEl.textContent = String(total);
         const gidEl = document.getElementById('gameIdValue');
-        if (gidEl) gidEl.textContent = latest.game_id ? `#${latest.game_id}` : gidEl.textContent;
+        if (gidEl) gidEl.textContent = latest.game_id ? formatDisplayGameId(latest.game_id) : gidEl.textContent;
 
         const mark = latest.mark || '';
         if (markText) markText.textContent = mark ? `Mark table: ${mark}` : 'No current mark data';

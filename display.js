@@ -59,6 +59,11 @@
     return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
   }
 
+  function formatDisplayGameId(id) {
+    const numericId = String(id || '').replace(/\D/g, '');
+    return numericId ? `A${numericId}` : '—';
+  }
+
   function bingoColumn(n) {
     if (n >= 1  && n <= 15) return 'B';
     if (n >= 16 && n <= 30) return 'I';
@@ -219,7 +224,7 @@
   }
 
   function populateMiniHeader(gid, pl, po) {
-    if (dspGameId)  dspGameId.textContent  = gid ? `#${gid}` : '—';
+    if (dspGameId)  dspGameId.textContent  = formatDisplayGameId(gid);
     if (dspAmount)  dspAmount.textContent  = `$${amount}`;
     if (dspPlayers) dspPlayers.textContent = String(pl || '0');
     if (dspPayout)  dspPayout.textContent  = parseInt(po, 10) > 0 ? `$${po}` : '—';

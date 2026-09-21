@@ -585,7 +585,7 @@ main {
 }
 
 .game-id-display {
-  display: none;
+  order: -2;
 }
 
 .players-counter {
@@ -884,7 +884,7 @@ main {
 }
 
 .mini-header-select[data-select="amount"] {
-  order: -1;
+  order: 0;
 }
 
 .amount-current {
