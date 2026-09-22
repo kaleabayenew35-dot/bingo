@@ -86,9 +86,27 @@ async function resolveAuthState() {
     }
 
     // support both flat { phone, username, balance } and nested { user: { ... } }
-    const phone    = systemData.phone    ?? systemData.user?.phone    ?? state.phone;
-    const username = systemData.username ?? systemData.user?.username ?? state.username;
-    const balance  = systemData.balance  ?? systemData.user?.balance  ?? 0;
+    const tokenPhone    = systemData.phone    ?? systemData.user?.phone;
+    const tokenUsername = systemData.username ?? systemData.user?.username;
+    const balance       = systemData.balance  ?? systemData.user?.balance  ?? 0;
+
+    // Guard: if URL had an explicit phone and it does not match the token's phone,
+    // discard the mismatched launch token so player identity isn't hijacked.
+    if (state.phone && state.phone !== '-' && tokenPhone) {
+      const urlClean = String(state.phone).replace(/\D/g, '');
+      const tokenClean = String(tokenPhone).replace(/\D/g, '');
+      if (urlClean && tokenClean && !urlClean.endsWith(tokenClean.slice(-9)) && !tokenClean.endsWith(urlClean.slice(-9))) {
+        console.warn(`[bingo-auth] URL phone (${state.phone}) does not match launch token phone (${tokenPhone}). Ignoring mismatched launch token.`);
+        return {
+          ...state,
+          launch: '',
+          verified: false,
+        };
+      }
+    }
+
+    const phone    = tokenPhone || state.phone;
+    const username = tokenUsername || state.username;
 
     return {
       ...state,

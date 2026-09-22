@@ -519,6 +519,7 @@ function maskPhone(phone) {
 function normalizePhoneIdentity(phone) {
   const clean = String(phone || '').replace(/\D/g, '');
   if (!clean) return '';
+  if (clean.length === 9) return `251${clean}`;
   if (clean.startsWith('251') && clean.length >= 12) return clean;
   if (clean.startsWith('0') && clean.length >= 10) return `251${clean.slice(1)}`;
   return clean;
