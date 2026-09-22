@@ -45,8 +45,6 @@ const statusSteps = [
 ];
 let currentStep = 0;
 
-let countdownInterval = null;
-let countdownSeconds = 60;
 const pages = [
   { start: 1, end: 100 },
   { start: 101, end: 200 },
@@ -66,89 +64,11 @@ let popupInfoOnly = false;    // occupied numbers show information and cannot be
 // map: number → array of masked phones who have betted it (from other players)
 let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '2511****23'] }
 
-// ── Phone masking — 2519876543210 → 2519****10 ─────────────────────────────
-function maskPhone(phone) {
-  const s = normalizePhoneIdentity(phone);
-  if (s.length < 6) return s;
-  // Keep enough digits to distinguish players with similar phone numbers.
-  const keep = 5;
-  const tail = 3;
-  const middle = s.length - keep - tail;
-  return s.slice(0, keep) + '*'.repeat(Math.max(middle, 2)) + s.slice(s.length - tail);
-}
-
-function normalizePhoneIdentity(phone) {
-  const clean = String(phone || '').replace(/\D/g, '');
-  if (!clean) return '';
-  if (clean.startsWith('251') && clean.length >= 12) return clean;
-  if (clean.startsWith('0') && clean.length >= 10) return `251${clean.slice(1)}`;
-  return clean;
-}
-
-// ── Parse mark string into { number → [maskedPhone, ...] } ─────────────────
-// Mark format: "username|phone:num1|num2,username2|phone2:num3"
-function parseMarkToOtherBets(markStr, myPhone) {
-  const map = {};
-  if (!markStr) return map;
-  const myClean = normalizePhoneIdentity(myPhone);
-  markStr.split(',').forEach((entry) => {
-    entry = entry.trim();
-    if (!entry) return;
-    const colonIdx = entry.indexOf(':');
-    if (colonIdx === -1) return;
-    const beforeColon = entry.slice(0, colonIdx);
-    const numStr = entry.slice(colonIdx + 1);
-    const pipeIdx = beforeColon.indexOf('|');
-    const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
-    const entryPhoneClean = normalizePhoneIdentity(entryPhone);
-    // skip our own entries
-    if (myClean && entryPhoneClean && entryPhoneClean === myClean) return;
-    const masked = maskPhone(entryPhoneClean || entryPhone);
-    numStr.split('|').map(Number).filter(Boolean).forEach((num) => {
-      if (!map[num]) map[num] = [];
-      if (!map[num].includes(masked)) map[num].push(masked);
-    });
-  });
-  return map;
-}
-
-// ── Restore own bets from mark string on page reload ───────────────────────
-// Finds own entries (matched by phone), rebuilds betEntries + bettedNumbers + betPlaced
-function restoreOwnBetsFromMark(markStr, myPhone) {
-  if (!markStr || !myPhone || myPhone === '-') return;
-  const myClean = normalizePhoneIdentity(myPhone);
-  const restoredEntries = [];
-
-  markStr.split(',').forEach((entry) => {
-    entry = entry.trim();
-    if (!entry) return;
-    const colonIdx = entry.indexOf(':');
-    if (colonIdx === -1) return;
-    const beforeColon = entry.slice(0, colonIdx);
-    const numStr = entry.slice(colonIdx + 1);
-    const pipeIdx = beforeColon.indexOf('|');
-    const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
-    const entryPhoneClean = normalizePhoneIdentity(entryPhone);
-    // only our own entries
-    const isOwn = myClean && entryPhoneClean && entryPhoneClean === myClean;
-    if (!isOwn) return;
-    const nums = numStr.split('|').map(Number).filter(Boolean);
-    if (nums.length > 0) restoredEntries.push({ numbers: nums });
-  });
-
-  if (restoredEntries.length > 0) {
-    betEntries = restoredEntries;
-    rebuildBettedNumbers();
-    betPlaced = true;
-  }
-}
-
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
 let playersPollInterval = null;   // live poll for players count + game ID
 let balancePollInterval = null;
 let redirecting = false; // prevent double-redirect
-let timerEndpoint = null;
 let amountLoadRequest = 0;
 let backendErrorShown = false;
 let activeRoundId = null;
@@ -166,13 +86,30 @@ function formatTime(seconds) {
   return `${minutes}:${remainder}`;
 }
 
-// startCountdown is now a no-op — real timer comes from startTimerPoll
-function startCountdown() {}
-
+// ── Real backend timer poll ────────────────────────────────
+// Polls GET /api/amount/:amount/timer every second.
+// Drives the countdown display and triggers the redirect when remaining <= 0.
 function startTimerPoll(amount) {
   if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
   redirecting = false;
   if (countdownTimer) countdownTimer.textContent = '--:--';
+
+  const poll = () => {
+    fetch(`${getEnvApiUrl()}/amount/${amount}/timer`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data || data.remaining == null) return;
+        if (countdownTimer) countdownTimer.textContent = formatTime(data.remaining);
+        if (data.remaining <= 0 && !redirecting) {
+          redirecting = true;
+          startRedirectCountdown(amount);
+        }
+      })
+      .catch(() => {}); // silent — show last known value on network error
+  };
+
+  poll(); // run immediately
+  timerPollInterval = setInterval(poll, 1000);
 }
 
 function startRedirectCountdown(amount) {
@@ -203,8 +140,6 @@ function startRedirectCountdown(amount) {
       const token    = authState.token    || '';
       const launch   = authState.launch   || '';
 
-      // payout is calculated by display.js from the backend (total_players × amount)
-
       const query = new URLSearchParams({
         amount:   String(amount),
         gameId,
@@ -220,6 +155,7 @@ function startRedirectCountdown(amount) {
       // Generate the 75-number draw on the backend BEFORE navigating
       // so display.js can immediately fetch and start revealing numbers
       stopPlayersPoll();
+      if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
       if (gameId) {
         fetch(`${getEnvApiUrl()}/draw/${gameId}/generate`, { method: 'POST' })
           .finally(() => {
@@ -570,7 +506,81 @@ function getEnvApiUrl() {
   return isLocal ? 'http://localhost:5000/api' : 'https://bingo-backend-m1yf.onrender.com/api';
 }
 
-function getCurrentUser() { return authState; }
+// ── Phone masking — 2519876543210 → 2519****10 ─────────────────────────────
+function maskPhone(phone) {
+  const s = normalizePhoneIdentity(phone);
+  if (s.length < 6) return s;
+  const keep = 5;
+  const tail = 3;
+  const middle = s.length - keep - tail;
+  return s.slice(0, keep) + '*'.repeat(Math.max(middle, 2)) + s.slice(s.length - tail);
+}
+
+function normalizePhoneIdentity(phone) {
+  const clean = String(phone || '').replace(/\D/g, '');
+  if (!clean) return '';
+  if (clean.startsWith('251') && clean.length >= 12) return clean;
+  if (clean.startsWith('0') && clean.length >= 10) return `251${clean.slice(1)}`;
+  return clean;
+}
+
+// ── Parse mark string into { number → [maskedPhone, ...] } ─────────────────
+// Mark format: "username|phone:num1|num2,username2|phone2:num3"
+function parseMarkToOtherBets(markStr, myPhone) {
+  const map = {};
+  if (!markStr) return map;
+  const myClean = normalizePhoneIdentity(myPhone);
+  markStr.split(',').forEach((entry) => {
+    entry = entry.trim();
+    if (!entry) return;
+    const colonIdx = entry.indexOf(':');
+    if (colonIdx === -1) return;
+    const beforeColon = entry.slice(0, colonIdx);
+    const numStr = entry.slice(colonIdx + 1);
+    const pipeIdx = beforeColon.indexOf('|');
+    const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
+    const entryPhoneClean = normalizePhoneIdentity(entryPhone);
+    // skip our own entries
+    if (myClean && entryPhoneClean && entryPhoneClean === myClean) return;
+    const masked = maskPhone(entryPhoneClean || entryPhone);
+    numStr.split('|').map(Number).filter(Boolean).forEach((num) => {
+      if (!map[num]) map[num] = [];
+      if (!map[num].includes(masked)) map[num].push(masked);
+    });
+  });
+  return map;
+}
+
+// ── Restore own bets from mark string on page reload ───────────────────────
+// Finds own entries (matched by phone), rebuilds betEntries + bettedNumbers + betPlaced
+function restoreOwnBetsFromMark(markStr, myPhone) {
+  if (!markStr || !myPhone || myPhone === '-') return;
+  const myClean = normalizePhoneIdentity(myPhone);
+  const restoredEntries = [];
+
+  markStr.split(',').forEach((entry) => {
+    entry = entry.trim();
+    if (!entry) return;
+    const colonIdx = entry.indexOf(':');
+    if (colonIdx === -1) return;
+    const beforeColon = entry.slice(0, colonIdx);
+    const numStr = entry.slice(colonIdx + 1);
+    const pipeIdx = beforeColon.indexOf('|');
+    const entryPhone = pipeIdx !== -1 ? beforeColon.slice(pipeIdx + 1) : beforeColon;
+    const entryPhoneClean = normalizePhoneIdentity(entryPhone);
+    // only our own entries
+    const isOwn = myClean && entryPhoneClean && entryPhoneClean === myClean;
+    if (!isOwn) return;
+    const nums = numStr.split('|').map(Number).filter(Boolean);
+    if (nums.length > 0) restoredEntries.push({ numbers: nums });
+  });
+
+  if (restoredEntries.length > 0) {
+    betEntries = restoredEntries;
+    rebuildBettedNumbers();
+    betPlaced = true;
+  }
+}
 
 async function syncPlayerWithBingoBackend() {
   if (!authState.phone || authState.phone === '-' || !authState.verified) return;
@@ -718,8 +728,6 @@ function closeHistoryModal() { closeModal(historyModal); }
 function renderHistoryContent(dbHistory) {
   if (!historyContent) return;
 
-  // merge in-session entries (placed/canceled this session) with DB history
-  // DB gives us placed bets; in-session has cancellations too
   const items = dbHistory && dbHistory.length > 0 ? dbHistory : [];
 
   if (items.length === 0 && betHistory.length === 0) {
@@ -832,6 +840,7 @@ function setupSelectDropdowns() {
       const amount = parseInt((valueDisplay.textContent || '').replace(/[^0-9]/g, ''), 10) || 10;
       loadAmountData(amount);
       startPlayersPoll(amount);
+      startTimerPoll(amount);
     };
 
     if (!trigger) {
@@ -1047,7 +1056,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         const systemApiUrl = (window.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api');
 
         if (authState.launch) {
-          // verify-launch-token returns { valid, phone, username, balance } — balance is top-level
           const res = await fetch(`${systemApiUrl}/verify-launch-token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1056,7 +1064,6 @@ window.addEventListener('DOMContentLoaded', async () => {
           if (res.ok) {
             const data = await res.json();
             if (data.valid) {
-              // balance is top-level in response (not inside data.user)
               const freshBalance = data.balance ?? data.user?.balance ?? null;
               if (freshBalance != null) {
                 authState = { ...authState, balance: Number(freshBalance) };
@@ -1103,6 +1110,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (logoutConfirmBtn) logoutConfirmBtn.addEventListener('click', () => { window.location.href = window.location.pathname; });
 
   if (popupClose) popupClose.addEventListener('click', hideSelectionPopup);
+
+  // ── startChatBtn (kept inside DOMContentLoaded so DOM is guaranteed ready) ──
+  if (startChatBtn) {
+    startChatBtn.addEventListener('click', () => {
+      alert('Chat flow will open here in the next iteration.');
+    });
+  }
 
   updateBetSummary();
 
@@ -1151,9 +1165,9 @@ window.addEventListener('DOMContentLoaded', async () => {
           updateBetSummary();
           refreshBetButtonState();
           loadAmountData(a);
-          const refundMsg = cancelData.refundAmount ? ` · $${cancelData.refundAmount} refunded` : '';
-          showCenterToast('cancel', 'Bet Canceled', `Refunded$${cancelData.refundAmount || 0}`);
-          showStatus(`Bet canceled${refundMsg}`, 'success');
+          const refundAmount = cancelData.refundAmount || 0;
+          showCenterToast('cancel', 'Bet Canceled', `Refunded $${refundAmount}`);
+          showStatus(`Bet canceled · $${refundAmount} refunded`, 'success');
         } catch (err) {
           console.error('Cancel failed', err);
           showStatus(`Failed to cancel bet: ${err.message || err}`, 'error');
@@ -1196,9 +1210,9 @@ window.addEventListener('DOMContentLoaded', async () => {
           refreshBetButtonState();
           renderNumberGrid(currentPageIndex);
           loadAmountData(a);
-          const refundMsg = cancelData.refundAmount ? ` · $${cancelData.refundAmount} refunded` : '';
-          showCenterToast('cancel', 'All Bets Canceled', `Refunded $${cancelData.refundAmount || 0}`);
-          showStatus(`All bets canceled${refundMsg}`, 'success');
+          const refundAmount = cancelData.refundAmount || 0;
+          showCenterToast('cancel', 'All Bets Canceled', `Refunded $${refundAmount}`);
+          showStatus(`All bets canceled · $${refundAmount} refunded`, 'success');
         } catch (err) {
           console.error('Cancel all failed', err);
           showStatus(`Failed to cancel bets: ${err.message || err}`, 'error');
@@ -1287,9 +1301,3 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
-
-if (startChatBtn) {
-  startChatBtn.addEventListener('click', () => {
-    alert('Chat flow will open here in the next iteration.');
-  });
-}

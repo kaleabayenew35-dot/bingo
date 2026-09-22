@@ -299,7 +299,7 @@
     let preCount = 3;
     const preInterval = setInterval(() => {
       preCount -= 1;
-      if (displayTimer) displayTimer.textContent = preCount > 0 ? `00:0${preCount}` : '🎯';
+      if (displayTimer) displayTimer.textContent = preCount > 0 ? formatTime(preCount) : '🎯';
       if (preCount <= 0) {
         clearInterval(preInterval);
         // Start polling backend for calls every 3 seconds
