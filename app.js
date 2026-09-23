@@ -66,6 +66,7 @@ let otherPlayersBets = {};   // e.g. { 1: ['2519****80'], 5: ['2519****80', '251
 
 // ── Backend-driven timer ───────────────────────────────────
 let timerPollInterval = null;
+let timerExpiryTimeout = null;
 let playersPollInterval = null;   // live poll for players count + game ID
 let balancePollInterval = null;
 let redirecting = false; // prevent double-redirect
@@ -91,6 +92,7 @@ function formatTime(seconds) {
 // Drives the countdown display and triggers the redirect when remaining <= 0.
 function startTimerPoll(amount) {
   if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
+  if (timerExpiryTimeout) { clearTimeout(timerExpiryTimeout); timerExpiryTimeout = null; }
   redirecting = false;
   if (countdownTimer) countdownTimer.textContent = '--:--';
 
@@ -100,7 +102,15 @@ function startTimerPoll(amount) {
       .then((data) => {
         if (!data || data.remaining == null) return;
         if (countdownTimer) countdownTimer.textContent = formatTime(data.remaining);
-        if (data.remaining <= 0 && !redirecting) {
+        if (!redirecting && data.endsAt) {
+          const delay = Math.max(0, Number(data.endsAt) - Date.now());
+          if (timerExpiryTimeout) clearTimeout(timerExpiryTimeout);
+          timerExpiryTimeout = setTimeout(() => {
+            if (redirecting) return;
+            redirecting = true;
+            startRedirectCountdown(amount);
+          }, delay);
+        } else if (data.remaining <= 0 && !redirecting) {
           redirecting = true;
           startRedirectCountdown(amount);
         }
@@ -151,6 +161,7 @@ function startRedirectCountdown(amount) {
 
           stopPlayersPoll();
           if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
+          if (timerExpiryTimeout) { clearTimeout(timerExpiryTimeout); timerExpiryTimeout = null; }
           const navigate = () => { window.location.href = `display.html?${query.toString()}`; };
           if (gameId) {
             fetch(`${getEnvApiUrl()}/draw/${gameId}/generate`, { method: 'POST' }).finally(navigate);
