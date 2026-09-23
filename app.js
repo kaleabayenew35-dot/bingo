@@ -1178,7 +1178,26 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       // ── Cancel ALL bets (betPlaced, no pending selection) ──
       if (betPlaced && selectedNumbers.length === 0) {
+        if (!betEntries || betEntries.length === 0) {
+          console.warn('[bingo-cancel] all-bets fallback triggered with stale local state', {
+            authStatePhone: authState.phone,
+            betEntries,
+            bettedNumbers,
+            selectedNumbers,
+            pendingCancelEntry,
+          });
+          showStatus('No active bet to cancel.', 'error');
+          return;
+        }
+
         const allNums = [...bettedNumbers];
+        console.warn('[bingo-cancel] all-bets fallback triggered', {
+          authStatePhone: authState.phone,
+          betEntries: betEntries.map((entry) => [...entry.numbers]),
+          bettedNumbers: [...bettedNumbers],
+          selectedNumbers: [...selectedNumbers],
+          pendingCancelEntry: pendingCancelEntry ? [...pendingCancelEntry.numbers] : null,
+        });
         showStatus('Canceling all bets...', 'loading', 0);
         try {
           const cancelRes = await fetch(`${getEnvApiUrl()}/amount/${a}/cancel`, {
@@ -1205,7 +1224,11 @@ window.addEventListener('DOMContentLoaded', async () => {
           pendingCancelEntry = null;
           document.querySelectorAll('.number-button').forEach((btn) => btn.classList.remove('betted', 'active'));
           hideSelectionPopup();
-          if (markText) markText.textContent = 'No current mark data';
+          if (cancelData?.result?.row?.mark) {
+            if (markText) markText.textContent = `Mark table: ${cancelData.result.row.mark}`;
+          } else if (markText) {
+            markText.textContent = 'No current mark data';
+          }
           addHistoryEntry('canceled', gameIdValue ? gameIdValue.textContent : '-', a, allNums);
           updateBetSummary();
           refreshBetButtonState();
