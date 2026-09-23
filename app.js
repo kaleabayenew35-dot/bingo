@@ -221,9 +221,8 @@ function showSelectionPopup(tappedNumber, event) {
   if (tappedNumber !== undefined && bettedNumbers.includes(tappedNumber)) {
     const entry = findEntryForNumber(tappedNumber);
     if (entry) {
-      pendingCancelEntry = entry;
-      const sorted = [...entry.numbers].sort((a, b) => a - b);
-      selectedNumberText.textContent = sorted.join(', ');
+      pendingCancelEntry = { numbers: [tappedNumber] };
+      selectedNumberText.textContent = String(tappedNumber);
       if (betButton) betButton.textContent = 'Cancel This Bet';
       updatePopupOtherBettors(tappedNumber);
       selectionPopup.classList.add('open');
@@ -555,6 +554,9 @@ function parseMarkToOtherBets(markStr, myPhone) {
 // ── Restore own bets from mark string on page reload ───────────────────────
 // Finds own entries (matched by phone), rebuilds betEntries + bettedNumbers + betPlaced
 function restoreOwnBetsFromMark(markStr, myPhone) {
+  betEntries = [];
+  bettedNumbers = [];
+  betPlaced = false;
   if (!markStr || !myPhone || myPhone === '-') return;
   const myClean = normalizePhoneIdentity(myPhone);
   const restoredEntries = [];
@@ -1155,13 +1157,15 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (window.auth && window.auth.updateAuthUi) window.auth.updateAuthUi(authState);
           }
 
-          betEntries = betEntries.filter((e) => e !== pendingCancelEntry);
-          rebuildBettedNumbers();
           pendingCancelEntry = null;
-          betPlaced = betEntries.length > 0;
+          restoreOwnBetsFromMark(cancelData.remainingMark || cancelData.result?.row?.mark, authState.phone);
           addHistoryEntry('canceled', gameIdValue ? gameIdValue.textContent : '-', a, entryNums);
           hideSelectionPopup();
-          if (betEntries.length === 0 && markText) markText.textContent = 'No current mark data';
+          if (markText) {
+            markText.textContent = cancelData.remainingMark
+              ? `Mark table: ${cancelData.remainingMark}`
+              : 'No current mark data';
+          }
           renderNumberGrid(currentPageIndex);
           updateBetSummary();
           refreshBetButtonState();
