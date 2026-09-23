@@ -58,6 +58,16 @@ function getBingoApiUrl() {
   return isLocal ? 'http://localhost:5000/api' : 'https://bingo-backend-m1yf.onrender.com/api';
 }
 
+function normalizePhoneStrict(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const clean = String(value).replace(/\D/g, '');
+  if (!clean) return '';
+  if (clean.startsWith('251')) return clean;
+  if (clean.startsWith('0') && clean.length === 10) return `251${clean.slice(1)}`;
+  if (clean.length === 9) return `251${clean}`;
+  return clean;
+}
+
 function getSystemApiUrl() {
   return window.SYSTEM_API_URL || 'https://system-backend-1u5m.onrender.com/api';
 }
@@ -93,9 +103,9 @@ async function resolveAuthState() {
     // Guard: if URL had an explicit phone and it does not match the token's phone,
     // discard the mismatched launch token so player identity isn't hijacked.
     if (state.phone && state.phone !== '-' && tokenPhone) {
-      const urlClean = String(state.phone).replace(/\D/g, '');
-      const tokenClean = String(tokenPhone).replace(/\D/g, '');
-      if (urlClean && tokenClean && !urlClean.endsWith(tokenClean.slice(-9)) && !tokenClean.endsWith(urlClean.slice(-9))) {
+      const urlClean = normalizePhoneStrict(state.phone);
+      const tokenClean = normalizePhoneStrict(tokenPhone);
+      if (urlClean && tokenClean && urlClean !== tokenClean) {
         console.warn(`[bingo-auth] URL phone (${state.phone}) does not match launch token phone (${tokenPhone}). Ignoring mismatched launch token.`);
         return {
           ...state,
