@@ -125,45 +125,40 @@ function startRedirectCountdown(amount) {
     if (count <= 0) {
       clearInterval(flashInterval);
 
-      // ── Capture game data from live DOM ──
-      const gidEl   = document.getElementById('gameIdValue');
-      const plEl    = document.getElementById('playersValue');
-      const markEl  = document.getElementById('markText');
-      const gameId  = (gidEl ? gidEl.textContent : '').trim().replace(/^G-ID\s*=\s*/i, '') || '';
-      const players = (plEl   ? plEl.textContent   : '').replace('joined', '').trim() || '0';
-      const markRaw = (markEl ? markEl.textContent : '').replace('Mark table:', '').trim() || '';
-
-      // ── Capture player info from authState ──
-      const username = authState.username || '';
-      const phone    = authState.phone    || '';
-      const balance  = String(authState.balance || 0);
-      const token    = authState.token    || '';
-      const launch   = authState.launch   || '';
-
-      const query = new URLSearchParams({
-        amount:   String(amount),
-        gameId,
-        players,
-        mark:     markRaw,
-        username,
-        phone,
-        balance,
-        token,
-        launch,
-      });
-
-      // Generate the 75-number draw on the backend BEFORE navigating
-      // so display.js can immediately fetch and start revealing numbers
-      stopPlayersPoll();
-      if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
-      if (gameId) {
-        fetch(`${getEnvApiUrl()}/draw/${gameId}/generate`, { method: 'POST' })
-          .finally(() => {
-            window.location.href = `display.html?${query.toString()}`;
+      // Refresh the amount round before navigating so every player uses the
+      // same current game id when their shared amount timer expires.
+      fetch(`${getEnvApiUrl()}/amount/${amount}`)
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => {
+          const latest = data?.rows?.[0] || {};
+          const gidEl = document.getElementById('gameIdValue');
+          const plEl = document.getElementById('playersValue');
+          const markEl = document.getElementById('markText');
+          const gameId = latest.game_id || (gidEl ? gidEl.textContent : '').trim().replace(/^G-ID\s*=\s*/i, '') || '';
+          const players = String(latest.total_players ?? (plEl ? plEl.textContent : '0')).replace('joined', '').trim();
+          const markRaw = latest.mark || (markEl ? markEl.textContent : '').replace('Mark table:', '').trim() || '';
+          const query = new URLSearchParams({
+            amount: String(amount),
+            gameId,
+            players,
+            mark: markRaw,
+            username: authState.username || '',
+            phone: authState.phone || '',
+            balance: String(authState.balance || 0),
+            token: authState.token || '',
+            launch: authState.launch || '',
           });
-      } else {
-        window.location.href = `display.html?${query.toString()}`;
-      }
+
+          stopPlayersPoll();
+          if (timerPollInterval) { clearInterval(timerPollInterval); timerPollInterval = null; }
+          const navigate = () => { window.location.href = `display.html?${query.toString()}`; };
+          if (gameId) {
+            fetch(`${getEnvApiUrl()}/draw/${gameId}/generate`, { method: 'POST' }).finally(navigate);
+          } else {
+            navigate();
+          }
+        })
+        .catch(() => { window.location.href = `display.html?amount=${encodeURIComponent(amount)}`; });
     }
   }, 1000);
 }
